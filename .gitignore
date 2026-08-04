@@ -6,21 +6,22 @@ backend/app/frontend/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
-
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
 .venv/
 venv/
 env/
+*.egg-info/
 
 # Environment / secrets
 .env
 .env.*
-
-# IDE
-.vscode/
-.idea/
+!.env.example
 
 # OS
 .DS_Store
+Thumbs.db
+
+# IDE
+.idea/

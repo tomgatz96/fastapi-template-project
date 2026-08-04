@@ -18,7 +18,6 @@ class UserBase(SQLModel):
     full_name: str | None = Field(default=None, max_length=255)
 
 
-# Properties to receive via API on creation
 class UserCreate(UserBase):
     password: str = Field(min_length=8, max_length=128)
 
@@ -29,7 +28,6 @@ class UserRegister(SQLModel):
     full_name: str | None = Field(default=None, max_length=255)
 
 
-# Properties to receive via API on update, all are optional
 class UserUpdate(SQLModel):
     email: EmailStr | None = Field(default=None, max_length=255)
     is_active: bool | None = None
@@ -48,7 +46,6 @@ class UpdatePassword(SQLModel):
     new_password: str = Field(min_length=8, max_length=128)
 
 
-# Database model, database table inferred from class name
 class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     hashed_password: str
@@ -56,10 +53,9 @@ class User(UserBase, table=True):
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),  # type: ignore
     )
-    items: list[Item] = Relationship(back_populates="owner", cascade_delete=True)
+    boxes: list[Box] = Relationship(back_populates="owner", cascade_delete=True)
 
 
-# Properties to return via API, id is always required
 class UserPublic(UserBase):
     id: uuid.UUID
     created_at: datetime | None = None
@@ -70,60 +66,88 @@ class UsersPublic(SQLModel):
     count: int
 
 
-# Shared properties
-class ItemBase(SQLModel):
-    title: str = Field(min_length=1, max_length=255)
-    description: str | None = Field(default=None, max_length=255)
+# --- Box models ---
+
+class BoxBase(SQLModel):
+    name: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=1000)
 
 
-# Properties to receive on item creation
-class ItemCreate(ItemBase):
+class BoxCreate(BoxBase):
     pass
 
 
-# Properties to receive on item update
-class ItemUpdate(SQLModel):
-    title: str | None = Field(default=None, min_length=1, max_length=255)
-    description: str | None = Field(default=None, max_length=255)
+class BoxUpdate(SQLModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=1000)
 
 
-# Database model, database table inferred from class name
-class Item(ItemBase, table=True):
+class Box(BoxBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    created_at: datetime | None = Field(
-        default_factory=get_datetime_utc,
-        sa_type=DateTime(timezone=True),  # type: ignore
-    )
     owner_id: uuid.UUID = Field(
         foreign_key="user.id", nullable=False, ondelete="CASCADE"
     )
-    owner: User | None = Relationship(back_populates="items")
+    owner: User | None = Relationship(back_populates="boxes")
+    docs: list[Doc] = Relationship(back_populates="box", cascade_delete=True)
 
 
-# Properties to return via API, id is always required
-class ItemPublic(ItemBase):
+class BoxPublic(BoxBase):
     id: uuid.UUID
     owner_id: uuid.UUID
-    created_at: datetime | None = None
+    doc_count: int
+    completed: bool
 
 
-class ItemsPublic(SQLModel):
-    data: list[ItemPublic]
+class BoxesPublic(SQLModel):
+    data: list[BoxPublic]
     count: int
 
 
-# Generic message
+# --- Doc models ---
+
+class DocBase(SQLModel):
+    name: str = Field(min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=1000)
+    completed: bool = Field(default=False)
+
+
+class DocCreate(DocBase):
+    pass
+
+
+class DocUpdate(SQLModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = Field(default=None, max_length=1000)
+    completed: bool | None = None
+
+
+class Doc(DocBase, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    box_id: uuid.UUID = Field(
+        foreign_key="box.id", nullable=False, ondelete="CASCADE"
+    )
+    box: Box | None = Relationship(back_populates="docs")
+
+
+class DocPublic(DocBase):
+    id: uuid.UUID
+    box_id: uuid.UUID
+
+
+class DocsPublic(SQLModel):
+    data: list[DocPublic]
+    count: int
+
+
 class Message(SQLModel):
     message: str
 
 
-# JSON payload containing access token
 class Token(SQLModel):
     access_token: str
     token_type: str = "bearer"
 
 
-# Contents of JWT token
 class TokenPayload(SQLModel):
     sub: str | None = None
 

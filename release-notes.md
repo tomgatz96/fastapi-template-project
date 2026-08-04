@@ -30,10 +30,6 @@
 
 ### Internal
 
-* ⬆ Update psycopg[binary] requirement from <4.0.0,>=3.1.13 to >=3.3.4,<4.0.0. PR [#2399](https://github.com/fastapi/full-stack-fastapi-template/pull/2399) by [@dependabot[bot]](https://github.com/apps/dependabot).
-* ⬆ Bump the github-actions group with 5 updates. PR [#2397](https://github.com/fastapi/full-stack-fastapi-template/pull/2397) by [@dependabot[bot]](https://github.com/apps/dependabot).
-* ⬆ Update sentry-sdk[fastapi] requirement from <3.0.0,>=2.63.0 to >=2.66.1,<3.0.0. PR [#2400](https://github.com/fastapi/full-stack-fastapi-template/pull/2400) by [@dependabot[bot]](https://github.com/apps/dependabot).
-* ⬆ Bump the python-packages group with 3 updates. PR [#2398](https://github.com/fastapi/full-stack-fastapi-template/pull/2398) by [@dependabot[bot]](https://github.com/apps/dependabot).
 * 👷 Improve workflows for private repos. PR [#2394](https://github.com/fastapi/full-stack-fastapi-template/pull/2394) by [@tiangolo](https://github.com/tiangolo).
 * ⬆️ Upgrade latest-changes to 0.7.1. PR [#2389](https://github.com/fastapi/full-stack-fastapi-template/pull/2389) by [@tiangolo](https://github.com/tiangolo).
 * Bump axios from 1.16.0 to 1.18.0 in /frontend. PR [#2386](https://github.com/fastapi/full-stack-fastapi-template/pull/2386) by [@dependabot[bot]](https://github.com/apps/dependabot).
