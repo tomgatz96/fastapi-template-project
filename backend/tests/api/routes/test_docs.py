@@ -12,7 +12,7 @@ def test_create_doc(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
     box = create_random_box(db)
-    data = {"name": "Foo", "description": "Fighters", "completed": False}
+    data = {"name": "Foo", "description": "Fighters", "completed": False, "pages": 25}
     response = client.post(
         f"{settings.API_V1_STR}/boxes/{box.id}/docs/",
         headers=superuser_token_headers,
@@ -25,6 +25,7 @@ def test_create_doc(
     assert content["completed"] is False
     assert content["box_id"] == str(box.id)
     assert "id" in content
+    assert content["pages"] == 25
 
 
 def test_create_doc_box_not_enough_permissions(
@@ -109,7 +110,7 @@ def test_update_doc(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
     doc = create_random_doc(db)
-    data = {"name": "Updated", "description": "Updated desc", "completed": True}
+    data = {"name": "Updated", "description": "Updated desc", "completed": True, "pages": 99}
     response = client.put(
         f"{settings.API_V1_STR}/docs/{doc.id}",
         headers=superuser_token_headers,
@@ -119,6 +120,7 @@ def test_update_doc(
     content = response.json()
     assert content["name"] == data["name"]
     assert content["completed"] is True
+    assert content["pages"] == 99
 
 
 def test_update_doc_not_found(

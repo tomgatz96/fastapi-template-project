@@ -19,6 +19,7 @@ def _to_public(box: Box) -> BoxPublic:
         description=box.description,
         owner_id=box.owner_id,
         doc_count=len(docs),
+        total_pages=sum(d.pages for d in docs),
         completed=completed,
     )
 

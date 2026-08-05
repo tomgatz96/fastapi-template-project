@@ -24,6 +24,7 @@ def test_create_box(
     assert "owner_id" in content
     assert content["doc_count"] == 0
     assert content["completed"] is False
+    assert content["total_pages"] == 0
 
 
 def test_read_box(
@@ -42,6 +43,7 @@ def test_read_box(
     assert content["owner_id"] == str(box.owner_id)
     assert content["doc_count"] == 0
     assert content["completed"] is False
+    assert content["total_pages"] == 0
 
 
 def test_read_box_not_found(
@@ -159,7 +161,7 @@ def test_delete_box_not_enough_permissions(
     assert response.json()["detail"] == "Not enough permissions"
 
 
-# --- Box-specific business logic: doc_count / completed ---
+# --- Box-specific business logic: doc_count / total_pages / completed ---
 
 
 def test_box_completed_false_when_empty(
@@ -171,6 +173,7 @@ def test_box_completed_false_when_empty(
     )
     content = response.json()
     assert content["doc_count"] == 0
+    assert content["total_pages"] == 0
     assert content["completed"] is False
 
 
@@ -182,13 +185,14 @@ def test_box_completed_true_when_all_docs_done(
         client.post(
             f"{settings.API_V1_STR}/boxes/{box.id}/docs/",
             headers=superuser_token_headers,
-            json={"name": "Doc", "description": "d", "completed": True},
+            json={"name": "Doc", "description": "d", "completed": True, "pages": 10},
         )
     response = client.get(
         f"{settings.API_V1_STR}/boxes/{box.id}", headers=superuser_token_headers
     )
     content = response.json()
     assert content["doc_count"] == 3
+    assert content["total_pages"] == 30
     assert content["completed"] is True
 
 
@@ -199,16 +203,35 @@ def test_box_completed_false_when_one_doc_pending(
     client.post(
         f"{settings.API_V1_STR}/boxes/{box.id}/docs/",
         headers=superuser_token_headers,
-        json={"name": "Doc 1", "description": "d", "completed": True},
+        json={"name": "Doc 1", "description": "d", "completed": True, "pages": 5},
     )
     client.post(
         f"{settings.API_V1_STR}/boxes/{box.id}/docs/",
         headers=superuser_token_headers,
-        json={"name": "Doc 2", "description": "d", "completed": False},
+        json={"name": "Doc 2", "description": "d", "completed": False, "pages": 7},
     )
     response = client.get(
         f"{settings.API_V1_STR}/boxes/{box.id}", headers=superuser_token_headers
     )
     content = response.json()
     assert content["doc_count"] == 2
+    assert content["total_pages"] == 12
     assert content["completed"] is False
+
+
+def test_box_total_pages_sums_docs(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    box = create_random_box(db)
+    for pages in (3, 12, 40):
+        client.post(
+            f"{settings.API_V1_STR}/boxes/{box.id}/docs/",
+            headers=superuser_token_headers,
+            json={"name": "Doc", "description": "d", "pages": pages},
+        )
+    response = client.get(
+        f"{settings.API_V1_STR}/boxes/{box.id}", headers=superuser_token_headers
+    )
+    content = response.json()
+    assert content["doc_count"] == 3
+    assert content["total_pages"] == 55

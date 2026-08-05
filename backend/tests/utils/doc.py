@@ -1,3 +1,4 @@
+import random
 import uuid
 
 from sqlmodel import Session
@@ -13,5 +14,6 @@ def create_random_doc(db: Session, box_id: uuid.UUID | None = None) -> Doc:
         box_id = create_random_box(db).id
     name = random_lower_string()
     description = random_lower_string()
-    doc_in = DocCreate(name=name, description=description)
+    pages = random.randint(1, 100)
+    doc_in = DocCreate(name=name, description=description, pages=pages)
     return crud.create_doc(session=db, doc_in=doc_in, box_id=box_id)
