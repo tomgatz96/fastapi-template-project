@@ -3,22 +3,22 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { ItemsReadItemsData, ItemsReadItemsResponse, ItemsCreateItemData, ItemsCreateItemResponse, ItemsReadItemData, ItemsReadItemResponse, ItemsUpdateItemData, ItemsUpdateItemResponse, ItemsDeleteItemData, ItemsDeleteItemResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { BoxesReadBoxesData, BoxesReadBoxesResponse, BoxesCreateBoxData, BoxesCreateBoxResponse, BoxesReadBoxData, BoxesReadBoxResponse, BoxesUpdateBoxData, BoxesUpdateBoxResponse, BoxesDeleteBoxData, BoxesDeleteBoxResponse, DocsReadDocsData, DocsReadDocsResponse, DocsCreateDocData, DocsCreateDocResponse, DocsReadDocData, DocsReadDocResponse, DocsUpdateDocData, DocsUpdateDocResponse, DocsDeleteDocData, DocsDeleteDocResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
-export class ItemsService {
+export class BoxesService {
     /**
-     * Read Items
-     * Retrieve items.
+     * Read Boxes
+     * Retrieve boxes.
      * @param data The data for the request.
      * @param data.skip
      * @param data.limit
-     * @returns ItemsPublic Successful Response
+     * @returns BoxesPublic Successful Response
      * @throws ApiError
      */
-    public static readItems(data: ItemsReadItemsData = {}): CancelablePromise<ItemsReadItemsResponse> {
+    public static readBoxes(data: BoxesReadBoxesData = {}): CancelablePromise<BoxesReadBoxesResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/items/',
+            url: '/api/v1/boxes/',
             query: {
                 skip: data.skip,
                 limit: data.limit
@@ -30,17 +30,17 @@ export class ItemsService {
     }
     
     /**
-     * Create Item
-     * Create new item.
+     * Create Box
+     * Create new box.
      * @param data The data for the request.
      * @param data.requestBody
-     * @returns ItemPublic Successful Response
+     * @returns BoxPublic Successful Response
      * @throws ApiError
      */
-    public static createItem(data: ItemsCreateItemData): CancelablePromise<ItemsCreateItemResponse> {
+    public static createBox(data: BoxesCreateBoxData): CancelablePromise<BoxesCreateBoxResponse> {
         return __request(OpenAPI, {
             method: 'POST',
-            url: '/api/v1/items/',
+            url: '/api/v1/boxes/',
             body: data.requestBody,
             mediaType: 'application/json',
             errors: {
@@ -50,17 +50,17 @@ export class ItemsService {
     }
     
     /**
-     * Read Item
-     * Get item by ID.
+     * Read Box
+     * Get box by ID.
      * @param data The data for the request.
      * @param data.id
-     * @returns ItemPublic Successful Response
+     * @returns BoxPublic Successful Response
      * @throws ApiError
      */
-    public static readItem(data: ItemsReadItemData): CancelablePromise<ItemsReadItemResponse> {
+    public static readBox(data: BoxesReadBoxData): CancelablePromise<BoxesReadBoxResponse> {
         return __request(OpenAPI, {
             method: 'GET',
-            url: '/api/v1/items/{id}',
+            url: '/api/v1/boxes/{id}',
             path: {
                 id: data.id
             },
@@ -71,18 +71,18 @@ export class ItemsService {
     }
     
     /**
-     * Update Item
-     * Update an item.
+     * Update Box
+     * Update a box.
      * @param data The data for the request.
      * @param data.id
      * @param data.requestBody
-     * @returns ItemPublic Successful Response
+     * @returns BoxPublic Successful Response
      * @throws ApiError
      */
-    public static updateItem(data: ItemsUpdateItemData): CancelablePromise<ItemsUpdateItemResponse> {
+    public static updateBox(data: BoxesUpdateBoxData): CancelablePromise<BoxesUpdateBoxResponse> {
         return __request(OpenAPI, {
             method: 'PUT',
-            url: '/api/v1/items/{id}',
+            url: '/api/v1/boxes/{id}',
             path: {
                 id: data.id
             },
@@ -95,17 +95,130 @@ export class ItemsService {
     }
     
     /**
-     * Delete Item
-     * Delete an item.
+     * Delete Box
+     * Delete a box.
      * @param data The data for the request.
      * @param data.id
      * @returns Message Successful Response
      * @throws ApiError
      */
-    public static deleteItem(data: ItemsDeleteItemData): CancelablePromise<ItemsDeleteItemResponse> {
+    public static deleteBox(data: BoxesDeleteBoxData): CancelablePromise<BoxesDeleteBoxResponse> {
         return __request(OpenAPI, {
             method: 'DELETE',
-            url: '/api/v1/items/{id}',
+            url: '/api/v1/boxes/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class DocsService {
+    /**
+     * Read Docs
+     * Retrieve docs for a box.
+     * @param data The data for the request.
+     * @param data.boxId
+     * @returns DocsPublic Successful Response
+     * @throws ApiError
+     */
+    public static readDocs(data: DocsReadDocsData): CancelablePromise<DocsReadDocsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/boxes/{box_id}/docs/',
+            path: {
+                box_id: data.boxId
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Create Doc
+     * Create a new doc inside a box.
+     * @param data The data for the request.
+     * @param data.boxId
+     * @param data.requestBody
+     * @returns DocPublic Successful Response
+     * @throws ApiError
+     */
+    public static createDoc(data: DocsCreateDocData): CancelablePromise<DocsCreateDocResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/boxes/{box_id}/docs/',
+            path: {
+                box_id: data.boxId
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Read Doc
+     * Get doc by ID.
+     * @param data The data for the request.
+     * @param data.id
+     * @returns DocPublic Successful Response
+     * @throws ApiError
+     */
+    public static readDoc(data: DocsReadDocData): CancelablePromise<DocsReadDocResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/docs/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Update Doc
+     * Update a doc.
+     * @param data The data for the request.
+     * @param data.id
+     * @param data.requestBody
+     * @returns DocPublic Successful Response
+     * @throws ApiError
+     */
+    public static updateDoc(data: DocsUpdateDocData): CancelablePromise<DocsUpdateDocResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/api/v1/docs/{id}',
+            path: {
+                id: data.id
+            },
+            body: data.requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Delete Doc
+     * Delete a doc.
+     * @param data The data for the request.
+     * @param data.id
+     * @returns Message Successful Response
+     * @throws ApiError
+     */
+    public static deleteDoc(data: DocsDeleteDocData): CancelablePromise<DocsDeleteDocResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/api/v1/docs/{id}',
             path: {
                 id: data.id
             },

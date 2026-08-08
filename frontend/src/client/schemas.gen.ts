@@ -57,33 +57,19 @@ export const Body_login_login_access_tokenSchema = {
     title: 'Body_login-login_access_token'
 } as const;
 
-export const HTTPValidationErrorSchema = {
+export const BoxCreateSchema = {
     properties: {
-        detail: {
-            items: {
-                '$ref': '#/components/schemas/ValidationError'
-            },
-            type: 'array',
-            title: 'Detail'
-        }
-    },
-    type: 'object',
-    title: 'HTTPValidationError'
-} as const;
-
-export const ItemCreateSchema = {
-    properties: {
-        title: {
+        name: {
             type: 'string',
             maxLength: 255,
             minLength: 1,
-            title: 'Title'
+            title: 'Name'
         },
         description: {
             anyOf: [
                 {
                     type: 'string',
-                    maxLength: 255
+                    maxLength: 1000
                 },
                 {
                     type: 'null'
@@ -93,23 +79,23 @@ export const ItemCreateSchema = {
         }
     },
     type: 'object',
-    required: ['title'],
-    title: 'ItemCreate'
+    required: ['name'],
+    title: 'BoxCreate'
 } as const;
 
-export const ItemPublicSchema = {
+export const BoxPublicSchema = {
     properties: {
-        title: {
+        name: {
             type: 'string',
             maxLength: 255,
             minLength: 1,
-            title: 'Title'
+            title: 'Name'
         },
         description: {
             anyOf: [
                 {
                     type: 'string',
-                    maxLength: 255
+                    maxLength: 1000
                 },
                 {
                     type: 'null'
@@ -127,27 +113,27 @@ export const ItemPublicSchema = {
             format: 'uuid',
             title: 'Owner Id'
         },
-        created_at: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'date-time'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Created At'
+        doc_count: {
+            type: 'integer',
+            title: 'Doc Count'
+        },
+        total_pages: {
+            type: 'integer',
+            title: 'Total Pages'
+        },
+        completed: {
+            type: 'boolean',
+            title: 'Completed'
         }
     },
     type: 'object',
-    required: ['title', 'id', 'owner_id'],
-    title: 'ItemPublic'
+    required: ['name', 'id', 'owner_id', 'doc_count', 'total_pages', 'completed'],
+    title: 'BoxPublic'
 } as const;
 
-export const ItemUpdateSchema = {
+export const BoxUpdateSchema = {
     properties: {
-        title: {
+        name: {
             anyOf: [
                 {
                     type: 'string',
@@ -158,13 +144,13 @@ export const ItemUpdateSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Title'
+            title: 'Name'
         },
         description: {
             anyOf: [
                 {
                     type: 'string',
-                    maxLength: 255
+                    maxLength: 1000
                 },
                 {
                     type: 'null'
@@ -174,14 +160,14 @@ export const ItemUpdateSchema = {
         }
     },
     type: 'object',
-    title: 'ItemUpdate'
+    title: 'BoxUpdate'
 } as const;
 
-export const ItemsPublicSchema = {
+export const BoxesPublicSchema = {
     properties: {
         data: {
             items: {
-                '$ref': '#/components/schemas/ItemPublic'
+                '$ref': '#/components/schemas/BoxPublic'
             },
             type: 'array',
             title: 'Data'
@@ -193,7 +179,179 @@ export const ItemsPublicSchema = {
     },
     type: 'object',
     required: ['data', 'count'],
-    title: 'ItemsPublic'
+    title: 'BoxesPublic'
+} as const;
+
+export const DocCreateSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 255,
+            minLength: 1,
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 1000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        completed: {
+            type: 'boolean',
+            title: 'Completed',
+            default: false
+        },
+        pages: {
+            type: 'integer',
+            minimum: 0,
+            title: 'Pages',
+            default: 0
+        }
+    },
+    type: 'object',
+    required: ['name'],
+    title: 'DocCreate'
+} as const;
+
+export const DocPublicSchema = {
+    properties: {
+        name: {
+            type: 'string',
+            maxLength: 255,
+            minLength: 1,
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 1000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        completed: {
+            type: 'boolean',
+            title: 'Completed',
+            default: false
+        },
+        pages: {
+            type: 'integer',
+            minimum: 0,
+            title: 'Pages',
+            default: 0
+        },
+        id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Id'
+        },
+        box_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'Box Id'
+        }
+    },
+    type: 'object',
+    required: ['name', 'id', 'box_id'],
+    title: 'DocPublic'
+} as const;
+
+export const DocUpdateSchema = {
+    properties: {
+        name: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 255,
+                    minLength: 1
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Name'
+        },
+        description: {
+            anyOf: [
+                {
+                    type: 'string',
+                    maxLength: 1000
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Description'
+        },
+        completed: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Completed'
+        },
+        pages: {
+            anyOf: [
+                {
+                    type: 'integer',
+                    minimum: 0
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Pages'
+        }
+    },
+    type: 'object',
+    title: 'DocUpdate'
+} as const;
+
+export const DocsPublicSchema = {
+    properties: {
+        data: {
+            items: {
+                '$ref': '#/components/schemas/DocPublic'
+            },
+            type: 'array',
+            title: 'Data'
+        },
+        count: {
+            type: 'integer',
+            title: 'Count'
+        }
+    },
+    type: 'object',
+    required: ['data', 'count'],
+    title: 'DocsPublic'
+} as const;
+
+export const HTTPValidationErrorSchema = {
+    properties: {
+        detail: {
+            items: {
+                '$ref': '#/components/schemas/ValidationError'
+            },
+            type: 'array',
+            title: 'Detail'
+        }
+    },
+    type: 'object',
+    title: 'HTTPValidationError'
 } as const;
 
 export const MessageSchema = {

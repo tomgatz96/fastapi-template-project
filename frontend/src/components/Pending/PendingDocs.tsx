@@ -8,13 +8,14 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-const PendingItems = () => (
+const PendingDocs = () => (
   <Table>
     <TableHeader>
       <TableRow>
-        <TableHead>ID</TableHead>
-        <TableHead>Title</TableHead>
+        <TableHead>Done</TableHead>
+        <TableHead>Name</TableHead>
         <TableHead>Description</TableHead>
+        <TableHead>Pages</TableHead>
         <TableHead>
           <span className="sr-only">Actions</span>
         </TableHead>
@@ -24,13 +25,16 @@ const PendingItems = () => (
       {Array.from({ length: 5 }).map((_, index) => (
         <TableRow key={index}>
           <TableCell>
-            <Skeleton className="h-4 w-64 font-mono" />
+            <Skeleton className="size-4 rounded" />
           </TableCell>
           <TableCell>
             <Skeleton className="h-4 w-32" />
           </TableCell>
           <TableCell>
             <Skeleton className="h-4 w-48" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-4 w-8" />
           </TableCell>
           <TableCell>
             <div className="flex justify-end">
@@ -43,4 +47,4 @@ const PendingItems = () => (
   </Table>
 )
 
-export default PendingItems
+export default PendingDocs

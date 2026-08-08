@@ -9,31 +9,61 @@ export type Body_login_login_access_token = {
     client_secret?: (string | null);
 };
 
-export type HTTPValidationError = {
-    detail?: Array<ValidationError>;
-};
-
-export type ItemCreate = {
-    title: string;
+export type BoxCreate = {
+    name: string;
     description?: (string | null);
 };
 
-export type ItemPublic = {
-    title: string;
-    description?: (string | null);
-    id: string;
-    owner_id: string;
-    created_at?: (string | null);
-};
-
-export type ItemsPublic = {
-    data: Array<ItemPublic>;
+export type BoxesPublic = {
+    data: Array<BoxPublic>;
     count: number;
 };
 
-export type ItemUpdate = {
-    title?: (string | null);
+export type BoxPublic = {
+    name: string;
     description?: (string | null);
+    id: string;
+    owner_id: string;
+    doc_count: number;
+    total_pages: number;
+    completed: boolean;
+};
+
+export type BoxUpdate = {
+    name?: (string | null);
+    description?: (string | null);
+};
+
+export type DocCreate = {
+    name: string;
+    description?: (string | null);
+    completed?: boolean;
+    pages?: number;
+};
+
+export type DocPublic = {
+    name: string;
+    description?: (string | null);
+    completed?: boolean;
+    pages?: number;
+    id: string;
+    box_id: string;
+};
+
+export type DocsPublic = {
+    data: Array<DocPublic>;
+    count: number;
+};
+
+export type DocUpdate = {
+    name?: (string | null);
+    description?: (string | null);
+    completed?: (boolean | null);
+    pages?: (number | null);
+};
+
+export type HTTPValidationError = {
+    detail?: Array<ValidationError>;
 };
 
 export type Message = {
@@ -113,37 +143,69 @@ export type ValidationError = {
     };
 };
 
-export type ItemsReadItemsData = {
+export type BoxesReadBoxesData = {
     limit?: number;
     skip?: number;
 };
 
-export type ItemsReadItemsResponse = (ItemsPublic);
+export type BoxesReadBoxesResponse = (BoxesPublic);
 
-export type ItemsCreateItemData = {
-    requestBody: ItemCreate;
+export type BoxesCreateBoxData = {
+    requestBody: BoxCreate;
 };
 
-export type ItemsCreateItemResponse = (ItemPublic);
+export type BoxesCreateBoxResponse = (BoxPublic);
 
-export type ItemsReadItemData = {
+export type BoxesReadBoxData = {
     id: string;
 };
 
-export type ItemsReadItemResponse = (ItemPublic);
+export type BoxesReadBoxResponse = (BoxPublic);
 
-export type ItemsUpdateItemData = {
+export type BoxesUpdateBoxData = {
     id: string;
-    requestBody: ItemUpdate;
+    requestBody: BoxUpdate;
 };
 
-export type ItemsUpdateItemResponse = (ItemPublic);
+export type BoxesUpdateBoxResponse = (BoxPublic);
 
-export type ItemsDeleteItemData = {
+export type BoxesDeleteBoxData = {
     id: string;
 };
 
-export type ItemsDeleteItemResponse = (Message);
+export type BoxesDeleteBoxResponse = (Message);
+
+export type DocsReadDocsData = {
+    boxId: string;
+};
+
+export type DocsReadDocsResponse = (DocsPublic);
+
+export type DocsCreateDocData = {
+    boxId: string;
+    requestBody: DocCreate;
+};
+
+export type DocsCreateDocResponse = (DocPublic);
+
+export type DocsReadDocData = {
+    id: string;
+};
+
+export type DocsReadDocResponse = (DocPublic);
+
+export type DocsUpdateDocData = {
+    id: string;
+    requestBody: DocUpdate;
+};
+
+export type DocsUpdateDocResponse = (DocPublic);
+
+export type DocsDeleteDocData = {
+    id: string;
+};
+
+export type DocsDeleteDocResponse = (Message);
 
 export type LoginLoginAccessTokenData = {
     formData: Body_login_login_access_token;

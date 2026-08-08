@@ -1,11 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Pencil } from "lucide-react"
+import { Plus } from "lucide-react"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { type ItemPublic, ItemsService } from "@/client"
+import { type BoxCreate, BoxesService } from "@/client"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -15,8 +15,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog"
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import {
   Form,
   FormControl,
@@ -31,18 +31,13 @@ import useCustomToast from "@/hooks/useCustomToast"
 import { handleError } from "@/utils"
 
 const formSchema = z.object({
-  title: z.string().min(1, { message: "Title is required" }),
+  name: z.string().min(1, { message: "Name is required" }),
   description: z.string().optional(),
 })
 
 type FormData = z.infer<typeof formSchema>
 
-interface EditItemProps {
-  item: ItemPublic
-  onSuccess: () => void
-}
-
-const EditItem = ({ item, onSuccess }: EditItemProps) => {
+const AddBox = () => {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
   const { showSuccessToast, showErrorToast } = useCustomToast()
@@ -52,22 +47,22 @@ const EditItem = ({ item, onSuccess }: EditItemProps) => {
     mode: "onBlur",
     criteriaMode: "all",
     defaultValues: {
-      title: item.title,
-      description: item.description ?? undefined,
+      name: "",
+      description: "",
     },
   })
 
   const mutation = useMutation({
-    mutationFn: (data: FormData) =>
-      ItemsService.updateItem({ id: item.id, requestBody: data }),
+    mutationFn: (data: BoxCreate) =>
+      BoxesService.createBox({ requestBody: data }),
     onSuccess: () => {
-      showSuccessToast("Item updated successfully")
+      showSuccessToast("Box created successfully")
+      form.reset()
       setIsOpen(false)
-      onSuccess()
     },
     onError: handleError.bind(showErrorToast),
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["items"] })
+      queryClient.invalidateQueries({ queryKey: ["boxes"] })
     },
   })
 
@@ -77,33 +72,37 @@ const EditItem = ({ item, onSuccess }: EditItemProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DropdownMenuItem
-        onSelect={(e) => e.preventDefault()}
-        onClick={() => setIsOpen(true)}
-      >
-        <Pencil />
-        Edit Item
-      </DropdownMenuItem>
+      <DialogTrigger asChild>
+        <Button className="my-4">
+          <Plus className="mr-2" />
+          Add Box
+        </Button>
+      </DialogTrigger>
       <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add Box</DialogTitle>
+          <DialogDescription>
+            Fill in the details to add a new box.
+          </DialogDescription>
+        </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
-            <DialogHeader>
-              <DialogTitle>Edit Item</DialogTitle>
-              <DialogDescription>
-                Update the item details below.
-              </DialogDescription>
-            </DialogHeader>
             <div className="grid gap-4 py-4">
               <FormField
                 control={form.control}
-                name="title"
+                name="name"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Title <span className="text-destructive">*</span>
+                      Name <span className="text-destructive">*</span>
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder="Title" type="text" {...field} />
+                      <Input
+                        placeholder="Name"
+                        type="text"
+                        {...field}
+                        required
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -142,4 +141,4 @@ const EditItem = ({ item, onSuccess }: EditItemProps) => {
   )
 }
 
-export default EditItem
+export default AddBox
