@@ -13,11 +13,13 @@ router = APIRouter(prefix="/boxes", tags=["boxes"])
 def _to_public(box: Box) -> BoxPublic:
     docs = box.docs
     completed = bool(docs) and all(d.completed for d in docs)
+    owner = box.owner
     return BoxPublic(
         id=box.id,
         name=box.name,
         description=box.description,
         owner_id=box.owner_id,
+        owner_name=(owner.full_name or owner.email) if owner else None,
         doc_count=len(docs),
         total_pages=sum(d.pages for d in docs),
         completed=completed,
@@ -29,25 +31,12 @@ def read_boxes(
     session: SessionDep, current_user: CurrentUser, skip: int = 0, limit: int = 100
 ) -> Any:
     """
-    Retrieve boxes.
+    Retrieve boxes. Boxes are shared: every authenticated user sees all boxes.
     """
-    if current_user.is_superuser:
-        count_statement = select(func.count()).select_from(Box)
-        count = session.exec(count_statement).one()
-        statement = select(Box).offset(skip).limit(limit)
-        boxes = session.exec(statement).all()
-    else:
-        count_statement = (
-            select(func.count()).select_from(Box).where(Box.owner_id == current_user.id)
-        )
-        count = session.exec(count_statement).one()
-        statement = (
-            select(Box)
-            .where(Box.owner_id == current_user.id)
-            .offset(skip)
-            .limit(limit)
-        )
-        boxes = session.exec(statement).all()
+    count_statement = select(func.count()).select_from(Box)
+    count = session.exec(count_statement).one()
+    statement = select(Box).offset(skip).limit(limit)
+    boxes = session.exec(statement).all()
 
     return BoxesPublic(data=[_to_public(b) for b in boxes], count=count)
 
@@ -60,8 +49,6 @@ def read_box(session: SessionDep, current_user: CurrentUser, id: uuid.UUID) -> A
     box = session.get(Box, id)
     if not box:
         raise HTTPException(status_code=404, detail="Box not found")
-    if not current_user.is_superuser and (box.owner_id != current_user.id):
-        raise HTTPException(status_code=403, detail="Not enough permissions")
     return _to_public(box)
 
 
@@ -111,7 +98,7 @@ def delete_box(session: SessionDep, current_user: CurrentUser, id: uuid.UUID) ->
     box = session.get(Box, id)
     if not box:
         raise HTTPException(status_code=404, detail="Box not found")
-    if not current_user.is_superuser and (box.owner_id != current_user.id):
+    if not current_user.is_superuser:
         raise HTTPException(status_code=403, detail="Not enough permissions")
     session.delete(box)  # cascades to docs (Box.docs has cascade_delete=True)
     session.commit()

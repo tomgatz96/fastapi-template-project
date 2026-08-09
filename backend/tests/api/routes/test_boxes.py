@@ -22,6 +22,7 @@ def test_create_box(
     assert content["description"] == data["description"]
     assert "id" in content
     assert "owner_id" in content
+    assert content["owner_name"] is not None
     assert content["doc_count"] == 0
     assert content["completed"] is False
     assert content["total_pages"] == 0
@@ -57,16 +58,19 @@ def test_read_box_not_found(
     assert response.json()["detail"] == "Box not found"
 
 
-def test_read_box_not_enough_permissions(
+def test_read_box_is_shared_with_other_users(
     client: TestClient, normal_user_token_headers: dict[str, str], db: Session
 ) -> None:
+    """Boxes are shared: a user who does not own the box can still read it."""
     box = create_random_box(db)
     response = client.get(
         f"{settings.API_V1_STR}/boxes/{box.id}",
         headers=normal_user_token_headers,
     )
-    assert response.status_code == 403
-    assert response.json()["detail"] == "Not enough permissions"
+    assert response.status_code == 200
+    content = response.json()
+    assert content["id"] == str(box.id)
+    assert content["owner_id"] == str(box.owner_id)
 
 
 def test_read_boxes(
@@ -159,6 +163,40 @@ def test_delete_box_not_enough_permissions(
     )
     assert response.status_code == 403
     assert response.json()["detail"] == "Not enough permissions"
+
+
+def test_delete_own_box_requires_superuser(
+    client: TestClient, normal_user_token_headers: dict[str, str]
+) -> None:
+    """Even the owner cannot delete a box: deletion is superuser-only."""
+    created = client.post(
+        f"{settings.API_V1_STR}/boxes/",
+        headers=normal_user_token_headers,
+        json={"name": "Mine", "description": "owned by the normal user"},
+    )
+    assert created.status_code == 200
+    box_id = created.json()["id"]
+
+    response = client.delete(
+        f"{settings.API_V1_STR}/boxes/{box_id}",
+        headers=normal_user_token_headers,
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Not enough permissions"
+
+
+def test_read_boxes_shows_boxes_owned_by_others(
+    client: TestClient, normal_user_token_headers: dict[str, str], db: Session
+) -> None:
+    """The list endpoint is shared, so other people's boxes appear too."""
+    box = create_random_box(db)
+    response = client.get(
+        f"{settings.API_V1_STR}/boxes/",
+        headers=normal_user_token_headers,
+    )
+    assert response.status_code == 200
+    ids = [b["id"] for b in response.json()["data"]]
+    assert str(box.id) in ids
 
 
 # --- Box-specific business logic: doc_count / total_pages / completed ---

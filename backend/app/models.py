@@ -54,6 +54,7 @@ class User(UserBase, table=True):
         sa_type=DateTime(timezone=True),  # type: ignore
     )
     boxes: list[Box] = Relationship(back_populates="owner", cascade_delete=True)
+    assigned_docs: list[Doc] = Relationship(back_populates="assignee")
 
 
 class UserPublic(UserBase):
@@ -94,6 +95,7 @@ class Box(BoxBase, table=True):
 class BoxPublic(BoxBase):
     id: uuid.UUID
     owner_id: uuid.UUID
+    owner_name: str | None = None
     doc_count: int
     total_pages: int
     completed: bool
@@ -130,11 +132,17 @@ class Doc(DocBase, table=True):
         foreign_key="box.id", nullable=False, ondelete="CASCADE"
     )
     box: Box | None = Relationship(back_populates="docs")
+    assignee_id: uuid.UUID | None = Field(
+        default=None, foreign_key="user.id", nullable=True, ondelete="SET NULL"
+    )
+    assignee: User | None = Relationship(back_populates="assigned_docs")
 
 
 class DocPublic(DocBase):
     id: uuid.UUID
     box_id: uuid.UUID
+    assignee_id: uuid.UUID | None = None
+    assignee_name: str | None = None
 
 
 class DocsPublic(SQLModel):
