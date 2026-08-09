@@ -30,7 +30,7 @@ export const Route = createFileRoute("/_layout/boxes/$boxId")({
   head: () => ({
     meta: [
       {
-        title: "Box - FastAPI Template",
+        title: "Box - Box-Doc Manager",
       },
     ],
   }),

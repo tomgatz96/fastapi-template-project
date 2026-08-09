@@ -21,7 +21,7 @@ export const Route = createFileRoute("/_layout/boxes/")({
   head: () => ({
     meta: [
       {
-        title: "Boxes - FastAPI Template",
+        title: "Boxes - Box-Doc Manager",
       },
     ],
   }),
