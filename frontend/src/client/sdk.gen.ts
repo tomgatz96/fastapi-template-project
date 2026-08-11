@@ -3,12 +3,12 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { BoxesReadBoxesData, BoxesReadBoxesResponse, BoxesCreateBoxData, BoxesCreateBoxResponse, BoxesReadBoxData, BoxesReadBoxResponse, BoxesUpdateBoxData, BoxesUpdateBoxResponse, BoxesDeleteBoxData, BoxesDeleteBoxResponse, DocsReadDocsData, DocsReadDocsResponse, DocsCreateDocData, DocsCreateDocResponse, DocsReadDocData, DocsReadDocResponse, DocsUpdateDocData, DocsUpdateDocResponse, DocsDeleteDocData, DocsDeleteDocResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { BoxesReadBoxesData, BoxesReadBoxesResponse, BoxesCreateBoxData, BoxesCreateBoxResponse, BoxesReadBoxData, BoxesReadBoxResponse, BoxesUpdateBoxData, BoxesUpdateBoxResponse, BoxesDeleteBoxData, BoxesDeleteBoxResponse, DocsReadDocsData, DocsReadDocsResponse, DocsCreateDocData, DocsCreateDocResponse, DocsReadDocData, DocsReadDocResponse, DocsUpdateDocData, DocsUpdateDocResponse, DocsDeleteDocData, DocsDeleteDocResponse, DocsClaimDocData, DocsClaimDocResponse, DocsUnclaimDocData, DocsUnclaimDocResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class BoxesService {
     /**
      * Read Boxes
-     * Retrieve boxes.
+     * Retrieve boxes. Boxes are shared: every authenticated user sees all boxes.
      * @param data The data for the request.
      * @param data.skip
      * @param data.limit
@@ -119,7 +119,7 @@ export class BoxesService {
 export class DocsService {
     /**
      * Read Docs
-     * Retrieve docs for a box.
+     * Retrieve docs for a box. Visible to any authenticated user.
      * @param data The data for the request.
      * @param data.boxId
      * @returns DocsPublic Successful Response
@@ -140,7 +140,7 @@ export class DocsService {
     
     /**
      * Create Doc
-     * Create a new doc inside a box.
+     * Create a new doc inside a box. Any authenticated user may add docs.
      * @param data The data for the request.
      * @param data.boxId
      * @param data.requestBody
@@ -185,7 +185,10 @@ export class DocsService {
     
     /**
      * Update Doc
-     * Update a doc.
+     * Update a doc. Any authenticated user may edit docs in a shared box.
+     *
+     * Note: the assignee cannot be changed here. Use /docs/{id}/claim
+     * and /docs/{id}/unclaim instead.
      * @param data The data for the request.
      * @param data.id
      * @param data.requestBody
@@ -209,7 +212,7 @@ export class DocsService {
     
     /**
      * Delete Doc
-     * Delete a doc.
+     * Delete a doc. Superusers only.
      * @param data The data for the request.
      * @param data.id
      * @returns Message Successful Response
@@ -219,6 +222,49 @@ export class DocsService {
         return __request(OpenAPI, {
             method: 'DELETE',
             url: '/api/v1/docs/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Claim Doc
+     * Claim a doc for yourself. A user can only ever assign a doc to
+     * themselves, never to somebody else.
+     * @param data The data for the request.
+     * @param data.id
+     * @returns DocPublic Successful Response
+     * @throws ApiError
+     */
+    public static claimDoc(data: DocsClaimDocData): CancelablePromise<DocsClaimDocResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/docs/{id}/claim',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Unclaim Doc
+     * Release a doc you have claimed. Superusers may release any doc.
+     * @param data The data for the request.
+     * @param data.id
+     * @returns DocPublic Successful Response
+     * @throws ApiError
+     */
+    public static unclaimDoc(data: DocsUnclaimDocData): CancelablePromise<DocsUnclaimDocResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/docs/{id}/unclaim',
             path: {
                 id: data.id
             },

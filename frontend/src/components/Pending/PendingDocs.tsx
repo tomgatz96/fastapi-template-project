@@ -16,6 +16,7 @@ const PendingDocs = () => (
         <TableHead>Name</TableHead>
         <TableHead>Description</TableHead>
         <TableHead>Pages</TableHead>
+        <TableHead>Assignee</TableHead>
         <TableHead>
           <span className="sr-only">Actions</span>
         </TableHead>
@@ -35,6 +36,9 @@ const PendingDocs = () => (
           </TableCell>
           <TableCell>
             <Skeleton className="h-4 w-8" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-4 w-24" />
           </TableCell>
           <TableCell>
             <div className="flex justify-end">

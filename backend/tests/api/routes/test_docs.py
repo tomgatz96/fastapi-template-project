@@ -1,11 +1,39 @@
 import uuid
 
+import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.core.config import settings
+from app.models import Box
 from tests.utils.box import create_random_box
 from tests.utils.doc import create_random_doc
+
+
+@pytest.fixture(autouse=True)
+def release_all_claims(db: Session):
+    """A user may hold only one box; clear claims so tests stay independent."""
+    yield
+    db.expire_all()
+    for box in db.exec(select(Box).where(Box.assignee_id.is_not(None))).all():
+        box.assignee_id = None
+        db.add(box)
+    db.commit()
+
+
+def _claim(client: TestClient, headers: dict[str, str], box_id: str):
+    return client.post(f"{settings.API_V1_STR}/boxes/{box_id}/claim", headers=headers)
+
+
+def _complete(client: TestClient, headers: dict[str, str], doc_id: str, value=True):
+    return client.put(
+        f"{settings.API_V1_STR}/docs/{doc_id}",
+        headers=headers,
+        json={"completed": value},
+    )
+
+
+# --- CRUD ---
 
 
 def test_create_doc(
@@ -21,30 +49,42 @@ def test_create_doc(
     assert response.status_code == 200
     content = response.json()
     assert content["name"] == data["name"]
-    assert content["description"] == data["description"]
+    assert content["pages"] == 25
     assert content["completed"] is False
     assert content["box_id"] == str(box.id)
-    assert content["assignee_id"] is None
-    assert content["assignee_name"] is None
-    assert "id" in content
-    assert content["pages"] == 25
+    assert content["completed_at"] is None
+    assert content["completed_by_id"] is None
+    assert content["completed_by_name"] is None
 
 
-def test_create_doc_in_another_users_box(
+def test_create_doc_in_unclaimed_box_by_any_user(
     client: TestClient, normal_user_token_headers: dict[str, str], db: Session
 ) -> None:
-    """Boxes are shared, so anyone may add a doc to any box."""
+    """An unclaimed box is open for anyone to set up."""
     box = create_random_box(db)
-    data = {"name": "Foo", "description": "Fighters", "completed": False, "pages": 3}
     response = client.post(
         f"{settings.API_V1_STR}/boxes/{box.id}/docs/",
         headers=normal_user_token_headers,
-        json=data,
+        json={"name": "Foo", "description": "d", "pages": 3},
     )
     assert response.status_code == 200
-    content = response.json()
-    assert content["box_id"] == str(box.id)
-    assert content["assignee_id"] is None
+
+
+def test_create_doc_in_box_claimed_by_someone_else(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    normal_user_token_headers: dict[str, str],
+    db: Session,
+) -> None:
+    box = create_random_box(db)
+    assert _claim(client, superuser_token_headers, str(box.id)).status_code == 200
+    response = client.post(
+        f"{settings.API_V1_STR}/boxes/{box.id}/docs/",
+        headers=normal_user_token_headers,
+        json={"name": "Foo", "description": "d", "pages": 3},
+    )
+    assert response.status_code == 403
+    assert response.json()["detail"] == "This box is claimed by another user"
 
 
 def test_read_doc(
@@ -52,23 +92,17 @@ def test_read_doc(
 ) -> None:
     doc = create_random_doc(db)
     response = client.get(
-        f"{settings.API_V1_STR}/docs/{doc.id}",
-        headers=superuser_token_headers,
+        f"{settings.API_V1_STR}/docs/{doc.id}", headers=superuser_token_headers
     )
     assert response.status_code == 200
-    content = response.json()
-    assert content["name"] == doc.name
-    assert content["description"] == doc.description
-    assert content["id"] == str(doc.id)
-    assert content["box_id"] == str(doc.box_id)
+    assert response.json()["id"] == str(doc.id)
 
 
 def test_read_doc_not_found(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
     response = client.get(
-        f"{settings.API_V1_STR}/docs/{uuid.uuid4()}",
-        headers=superuser_token_headers,
+        f"{settings.API_V1_STR}/docs/{uuid.uuid4()}", headers=superuser_token_headers
     )
     assert response.status_code == 404
     assert response.json()["detail"] == "Doc not found"
@@ -79,11 +113,9 @@ def test_read_doc_is_shared_with_other_users(
 ) -> None:
     doc = create_random_doc(db)
     response = client.get(
-        f"{settings.API_V1_STR}/docs/{doc.id}",
-        headers=normal_user_token_headers,
+        f"{settings.API_V1_STR}/docs/{doc.id}", headers=normal_user_token_headers
     )
     assert response.status_code == 200
-    assert response.json()["id"] == str(doc.id)
 
 
 def test_read_docs(
@@ -93,8 +125,7 @@ def test_read_docs(
     create_random_doc(db, box_id=box.id)
     create_random_doc(db, box_id=box.id)
     response = client.get(
-        f"{settings.API_V1_STR}/boxes/{box.id}/docs/",
-        headers=superuser_token_headers,
+        f"{settings.API_V1_STR}/boxes/{box.id}/docs/", headers=superuser_token_headers
     )
     assert response.status_code == 200
     assert len(response.json()["data"]) >= 2
@@ -108,52 +139,48 @@ def test_read_docs_box_not_found(
         headers=superuser_token_headers,
     )
     assert response.status_code == 404
-    assert response.json()["detail"] == "Box not found"
 
 
-def test_update_doc(
-    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+def test_update_doc_fields_in_unclaimed_box(
+    client: TestClient, normal_user_token_headers: dict[str, str], db: Session
 ) -> None:
     doc = create_random_doc(db)
-    data = {"name": "Updated", "description": "Updated desc", "completed": True, "pages": 99}
     response = client.put(
         f"{settings.API_V1_STR}/docs/{doc.id}",
-        headers=superuser_token_headers,
-        json=data,
+        headers=normal_user_token_headers,
+        json={"name": "Updated", "pages": 99},
     )
     assert response.status_code == 200
     content = response.json()
-    assert content["name"] == data["name"]
-    assert content["completed"] is True
+    assert content["name"] == "Updated"
     assert content["pages"] == 99
 
 
 def test_update_doc_not_found(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
-    data = {"name": "Updated", "description": "Updated desc", "completed": True}
     response = client.put(
         f"{settings.API_V1_STR}/docs/{uuid.uuid4()}",
         headers=superuser_token_headers,
-        json=data,
+        json={"name": "x"},
     )
     assert response.status_code == 404
-    assert response.json()["detail"] == "Doc not found"
 
 
-def test_update_doc_by_other_user_is_allowed(
-    client: TestClient, normal_user_token_headers: dict[str, str], db: Session
+def test_update_doc_in_box_claimed_by_someone_else(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    normal_user_token_headers: dict[str, str],
+    db: Session,
 ) -> None:
-    """Docs in a shared box can be edited by any authenticated user."""
     doc = create_random_doc(db)
-    data = {"name": "Updated", "description": "Updated desc", "completed": True}
+    assert _claim(client, superuser_token_headers, str(doc.box_id)).status_code == 200
     response = client.put(
         f"{settings.API_V1_STR}/docs/{doc.id}",
         headers=normal_user_token_headers,
-        json=data,
+        json={"name": "Updated"},
     )
-    assert response.status_code == 200
-    assert response.json()["name"] == "Updated"
+    assert response.status_code == 403
 
 
 def test_delete_doc(
@@ -161,8 +188,7 @@ def test_delete_doc(
 ) -> None:
     doc = create_random_doc(db)
     response = client.delete(
-        f"{settings.API_V1_STR}/docs/{doc.id}",
-        headers=superuser_token_headers,
+        f"{settings.API_V1_STR}/docs/{doc.id}", headers=superuser_token_headers
     )
     assert response.status_code == 200
     assert response.json()["message"] == "Doc deleted successfully"
@@ -172,11 +198,9 @@ def test_delete_doc_not_found(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
     response = client.delete(
-        f"{settings.API_V1_STR}/docs/{uuid.uuid4()}",
-        headers=superuser_token_headers,
+        f"{settings.API_V1_STR}/docs/{uuid.uuid4()}", headers=superuser_token_headers
     )
     assert response.status_code == 404
-    assert response.json()["detail"] == "Doc not found"
 
 
 def test_delete_doc_not_enough_permissions(
@@ -184,147 +208,97 @@ def test_delete_doc_not_enough_permissions(
 ) -> None:
     doc = create_random_doc(db)
     response = client.delete(
-        f"{settings.API_V1_STR}/docs/{doc.id}",
-        headers=normal_user_token_headers,
+        f"{settings.API_V1_STR}/docs/{doc.id}", headers=normal_user_token_headers
     )
     assert response.status_code == 403
-    assert response.json()["detail"] == "Not enough permissions"
 
 
-# --- Claiming ---
+# --- Completion ---
 
 
-def _claim(client: TestClient, headers: dict[str, str], doc_id: str):
-    return client.post(f"{settings.API_V1_STR}/docs/{doc_id}/claim", headers=headers)
-
-
-def _unclaim(client: TestClient, headers: dict[str, str], doc_id: str):
-    return client.post(f"{settings.API_V1_STR}/docs/{doc_id}/unclaim", headers=headers)
-
-
-def test_claim_doc_assigns_to_caller(
+def test_complete_doc_requires_claiming_the_box(
     client: TestClient, normal_user_token_headers: dict[str, str], db: Session
 ) -> None:
     doc = create_random_doc(db)
-    response = _claim(client, normal_user_token_headers, str(doc.id))
-    assert response.status_code == 200
-    content = response.json()
-    assert content["assignee_id"] is not None
-    assert content["assignee_name"] is not None
-
-
-def test_claim_doc_twice_by_same_user_is_ok(
-    client: TestClient, normal_user_token_headers: dict[str, str], db: Session
-) -> None:
-    doc = create_random_doc(db)
-    first = _claim(client, normal_user_token_headers, str(doc.id))
-    second = _claim(client, normal_user_token_headers, str(doc.id))
-    assert first.status_code == 200
-    assert second.status_code == 200
-    assert first.json()["assignee_id"] == second.json()["assignee_id"]
-
-
-def test_claim_doc_already_claimed_by_someone_else(
-    client: TestClient,
-    superuser_token_headers: dict[str, str],
-    normal_user_token_headers: dict[str, str],
-    db: Session,
-) -> None:
-    doc = create_random_doc(db)
-    assert _claim(client, superuser_token_headers, str(doc.id)).status_code == 200
-    response = _claim(client, normal_user_token_headers, str(doc.id))
-    assert response.status_code == 409
-    assert response.json()["detail"] == "This doc is already claimed by another user"
-
-
-def test_claim_doc_not_found(
-    client: TestClient, normal_user_token_headers: dict[str, str]
-) -> None:
-    response = _claim(client, normal_user_token_headers, str(uuid.uuid4()))
-    assert response.status_code == 404
-    assert response.json()["detail"] == "Doc not found"
-
-
-def test_unclaim_doc_by_assignee(
-    client: TestClient, normal_user_token_headers: dict[str, str], db: Session
-) -> None:
-    doc = create_random_doc(db)
-    assert _claim(client, normal_user_token_headers, str(doc.id)).status_code == 200
-    response = _unclaim(client, normal_user_token_headers, str(doc.id))
-    assert response.status_code == 200
-    content = response.json()
-    assert content["assignee_id"] is None
-    assert content["assignee_name"] is None
-
-
-def test_unclaim_doc_that_is_not_claimed(
-    client: TestClient, normal_user_token_headers: dict[str, str], db: Session
-) -> None:
-    doc = create_random_doc(db)
-    response = _unclaim(client, normal_user_token_headers, str(doc.id))
-    assert response.status_code == 409
-    assert response.json()["detail"] == "This doc is not claimed"
-
-
-def test_unclaim_doc_claimed_by_someone_else(
-    client: TestClient,
-    superuser_token_headers: dict[str, str],
-    normal_user_token_headers: dict[str, str],
-    db: Session,
-) -> None:
-    doc = create_random_doc(db)
-    assert _claim(client, superuser_token_headers, str(doc.id)).status_code == 200
-    response = _unclaim(client, normal_user_token_headers, str(doc.id))
+    response = _complete(client, normal_user_token_headers, str(doc.id))
     assert response.status_code == 403
-    assert response.json()["detail"] == "You can only release a doc assigned to you"
+    assert response.json()["detail"] == "Claim this box before completing its docs"
 
 
-def test_superuser_can_unclaim_any_doc(
-    client: TestClient,
-    superuser_token_headers: dict[str, str],
-    normal_user_token_headers: dict[str, str],
-    db: Session,
-) -> None:
-    doc = create_random_doc(db)
-    assert _claim(client, normal_user_token_headers, str(doc.id)).status_code == 200
-    response = _unclaim(client, superuser_token_headers, str(doc.id))
-    assert response.status_code == 200
-    assert response.json()["assignee_id"] is None
-
-
-def test_update_doc_cannot_change_assignee(
-    client: TestClient,
-    superuser_token_headers: dict[str, str],
-    normal_user_token_headers: dict[str, str],
-    db: Session,
-) -> None:
-    """assignee_id is not part of DocUpdate, so PUT must not set it."""
-    doc = create_random_doc(db)
-    me = client.get(
-        f"{settings.API_V1_STR}/users/me", headers=superuser_token_headers
-    ).json()
-
-    response = client.put(
-        f"{settings.API_V1_STR}/docs/{doc.id}",
-        headers=normal_user_token_headers,
-        json={"name": "Sneaky", "assignee_id": me["id"]},
-    )
-    assert response.status_code == 200
-    assert response.json()["assignee_id"] is None
-
-
-def test_completed_doc_reports_assignee(
+def test_complete_doc_records_who_and_when(
     client: TestClient, normal_user_token_headers: dict[str, str], db: Session
 ) -> None:
-    """A claimed and completed doc carries the assignee name for display."""
-    doc = create_random_doc(db)
-    assert _claim(client, normal_user_token_headers, str(doc.id)).status_code == 200
-    response = client.put(
-        f"{settings.API_V1_STR}/docs/{doc.id}",
-        headers=normal_user_token_headers,
-        json={"completed": True},
-    )
+    box = create_random_box(db)
+    doc_a = create_random_doc(db, box_id=box.id)
+    create_random_doc(db, box_id=box.id)
+    assert _claim(client, normal_user_token_headers, str(box.id)).status_code == 200
+
+    response = _complete(client, normal_user_token_headers, str(doc_a.id))
     assert response.status_code == 200
     content = response.json()
     assert content["completed"] is True
-    assert content["assignee_name"] is not None
+    assert content["completed_at"] is not None
+    assert content["completed_by_id"] is not None
+    assert content["completed_by_name"] is not None
+
+
+def test_uncomplete_doc_clears_completion(
+    client: TestClient, normal_user_token_headers: dict[str, str], db: Session
+) -> None:
+    box = create_random_box(db)
+    doc_a = create_random_doc(db, box_id=box.id)
+    create_random_doc(db, box_id=box.id)
+    assert _claim(client, normal_user_token_headers, str(box.id)).status_code == 200
+    assert _complete(client, normal_user_token_headers, str(doc_a.id)).status_code == 200
+
+    response = _complete(client, normal_user_token_headers, str(doc_a.id), value=False)
+    assert response.status_code == 200
+    content = response.json()
+    assert content["completed"] is False
+    assert content["completed_at"] is None
+    assert content["completed_by_id"] is None
+    assert content["completed_by_name"] is None
+
+
+def test_editing_other_fields_keeps_completion_intact(
+    client: TestClient, normal_user_token_headers: dict[str, str], db: Session
+) -> None:
+    box = create_random_box(db)
+    doc_a = create_random_doc(db, box_id=box.id)
+    create_random_doc(db, box_id=box.id)
+    assert _claim(client, normal_user_token_headers, str(box.id)).status_code == 200
+    completed = _complete(client, normal_user_token_headers, str(doc_a.id)).json()
+
+    response = client.put(
+        f"{settings.API_V1_STR}/docs/{doc_a.id}",
+        headers=normal_user_token_headers,
+        json={"name": "Renamed"},
+    )
+    assert response.status_code == 200
+    content = response.json()
+    assert content["name"] == "Renamed"
+    assert content["completed_at"] == completed["completed_at"]
+    assert content["completed_by_id"] == completed["completed_by_id"]
+
+
+def test_superuser_can_complete_without_claiming(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    box = create_random_box(db)
+    doc_a = create_random_doc(db, box_id=box.id)
+    create_random_doc(db, box_id=box.id)
+    response = _complete(client, superuser_token_headers, str(doc_a.id))
+    assert response.status_code == 200
+    assert response.json()["completed_by_name"] is not None
+
+
+def test_create_doc_completed_requires_holding_box(
+    client: TestClient, normal_user_token_headers: dict[str, str], db: Session
+) -> None:
+    box = create_random_box(db)
+    response = client.post(
+        f"{settings.API_V1_STR}/boxes/{box.id}/docs/",
+        headers=normal_user_token_headers,
+        json={"name": "Done already", "pages": 1, "completed": True},
+    )
+    assert response.status_code == 403

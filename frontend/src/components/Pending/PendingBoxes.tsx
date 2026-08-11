@@ -14,6 +14,7 @@ const PendingBoxes = () => (
       <TableRow>
         <TableHead>Name</TableHead>
         <TableHead>Description</TableHead>
+        <TableHead>Owner</TableHead>
         <TableHead>Docs</TableHead>
         <TableHead>Pages</TableHead>
         <TableHead>Status</TableHead>
@@ -30,6 +31,9 @@ const PendingBoxes = () => (
           </TableCell>
           <TableCell>
             <Skeleton className="h-4 w-48" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-4 w-24" />
           </TableCell>
           <TableCell>
             <Skeleton className="h-4 w-8" />

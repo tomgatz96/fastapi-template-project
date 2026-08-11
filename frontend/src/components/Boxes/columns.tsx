@@ -38,6 +38,15 @@ export const columns: ColumnDef<BoxPublic>[] = [
     },
   },
   {
+    accessorKey: "owner_name",
+    header: "Owner",
+    cell: ({ row }) => (
+      <span className="text-sm text-muted-foreground">
+        {row.original.owner_name ?? "Unknown"}
+      </span>
+    ),
+  },
+  {
     accessorKey: "doc_count",
     header: "Docs",
     cell: ({ row }) => (

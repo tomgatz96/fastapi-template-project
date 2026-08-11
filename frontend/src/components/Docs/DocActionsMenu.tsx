@@ -8,6 +8,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import useAuth from "@/hooks/useAuth"
 import DeleteDoc from "./DeleteDoc"
 import EditDoc from "./EditDoc"
 
@@ -17,6 +18,9 @@ interface DocActionsMenuProps {
 
 export const DocActionsMenu = ({ doc }: DocActionsMenuProps) => {
   const [open, setOpen] = useState(false)
+  const { user: currentUser } = useAuth()
+
+  const canDelete = Boolean(currentUser?.is_superuser)
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
@@ -27,11 +31,13 @@ export const DocActionsMenu = ({ doc }: DocActionsMenuProps) => {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <EditDoc doc={doc} onSuccess={() => setOpen(false)} />
-        <DeleteDoc
-          id={doc.id}
-          boxId={doc.box_id}
-          onSuccess={() => setOpen(false)}
-        />
+        {canDelete ? (
+          <DeleteDoc
+            id={doc.id}
+            boxId={doc.box_id}
+            onSuccess={() => setOpen(false)}
+          />
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   )

@@ -53,8 +53,19 @@ class User(UserBase, table=True):
         default_factory=get_datetime_utc,
         sa_type=DateTime(timezone=True),  # type: ignore
     )
-    boxes: list[Box] = Relationship(back_populates="owner", cascade_delete=True)
-    assigned_docs: list[Doc] = Relationship(back_populates="assignee")
+    boxes: list["Box"] = Relationship(
+        back_populates="owner",
+        cascade_delete=True,
+        sa_relationship_kwargs={"foreign_keys": "Box.owner_id"},
+    )
+    claimed_box: "Box" = Relationship(
+        back_populates="assignee",
+        sa_relationship_kwargs={
+            "uselist": False,
+            "foreign_keys": "Box.assignee_id",
+        },
+    )
+    completed_docs: list["Doc"] = Relationship(back_populates="completed_by")
 
 
 class UserPublic(UserBase):
@@ -88,14 +99,29 @@ class Box(BoxBase, table=True):
     owner_id: uuid.UUID = Field(
         foreign_key="user.id", nullable=False, ondelete="CASCADE"
     )
-    owner: User | None = Relationship(back_populates="boxes")
-    docs: list[Doc] = Relationship(back_populates="box", cascade_delete=True)
+    owner: User | None = Relationship(
+        back_populates="boxes", sa_relationship_kwargs={"foreign_keys": "Box.owner_id"}
+    )
+    assignee_id: uuid.UUID | None = Field(
+        default=None,
+        foreign_key="user.id",
+        nullable=True,
+        unique=True,
+        ondelete="SET NULL",
+    )
+    assignee: User | None = Relationship(
+        back_populates="claimed_box",
+        sa_relationship_kwargs={"foreign_keys": "Box.assignee_id"},
+    )
+    docs: list["Doc"] = Relationship(back_populates="box", cascade_delete=True)
 
 
 class BoxPublic(BoxBase):
     id: uuid.UUID
     owner_id: uuid.UUID
     owner_name: str | None = None
+    assignee_id: uuid.UUID | None = None
+    assignee_name: str | None = None
     doc_count: int
     total_pages: int
     completed: bool
@@ -132,17 +158,23 @@ class Doc(DocBase, table=True):
         foreign_key="box.id", nullable=False, ondelete="CASCADE"
     )
     box: Box | None = Relationship(back_populates="docs")
-    assignee_id: uuid.UUID | None = Field(
+    completed_at: datetime | None = Field(
+        default=None,
+        sa_type=DateTime(timezone=True),  # type: ignore
+        nullable=True,
+    )
+    completed_by_id: uuid.UUID | None = Field(
         default=None, foreign_key="user.id", nullable=True, ondelete="SET NULL"
     )
-    assignee: User | None = Relationship(back_populates="assigned_docs")
+    completed_by: User | None = Relationship(back_populates="completed_docs")
 
 
 class DocPublic(DocBase):
     id: uuid.UUID
     box_id: uuid.UUID
-    assignee_id: uuid.UUID | None = None
-    assignee_name: str | None = None
+    completed_at: datetime | None = None
+    completed_by_id: uuid.UUID | None = None
+    completed_by_name: str | None = None
 
 
 class DocsPublic(SQLModel):

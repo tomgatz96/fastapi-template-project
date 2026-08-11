@@ -2,10 +2,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import type { ColumnDef } from "@tanstack/react-table"
 
 import { type DocPublic, DocsService } from "@/client"
+import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import useCustomToast from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
+import ClaimDoc from "./ClaimDoc"
 import { DocActionsMenu } from "./DocActionsMenu"
 
 function CompletedToggle({ doc }: { doc: DocPublic }) {
@@ -33,6 +35,25 @@ function CompletedToggle({ doc }: { doc: DocPublic }) {
       onCheckedChange={(checked) => mutation.mutate(checked === true)}
       aria-label="Toggle completed"
     />
+  )
+}
+
+function AssigneeCell({ doc }: { doc: DocPublic }) {
+  if (!doc.assignee_id) {
+    return (
+      <span className="text-muted-foreground italic text-sm">Unassigned</span>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-sm">{doc.assignee_name}</span>
+      {doc.completed ? (
+        <Badge variant="secondary" className="w-fit text-xs">
+          Completed by {doc.assignee_name}
+        </Badge>
+      ) : null}
+    </div>
   )
 }
 
@@ -79,6 +100,16 @@ export const columns: ColumnDef<DocPublic>[] = [
     cell: ({ row }) => (
       <span className="tabular-nums">{row.original.pages ?? 0}</span>
     ),
+  },
+  {
+    id: "assignee",
+    header: "Assignee",
+    cell: ({ row }) => <AssigneeCell doc={row.original} />,
+  },
+  {
+    id: "claim",
+    header: () => <span className="sr-only">Claim</span>,
+    cell: ({ row }) => <ClaimDoc doc={row.original} />,
   },
   {
     id: "actions",

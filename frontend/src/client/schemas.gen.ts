@@ -113,6 +113,17 @@ export const BoxPublicSchema = {
             format: 'uuid',
             title: 'Owner Id'
         },
+        owner_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Owner Name'
+        },
         doc_count: {
             type: 'integer',
             title: 'Doc Count'
@@ -259,6 +270,29 @@ export const DocPublicSchema = {
             type: 'string',
             format: 'uuid',
             title: 'Box Id'
+        },
+        assignee_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Assignee Id'
+        },
+        assignee_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Assignee Name'
         }
     },
     type: 'object',
