@@ -124,6 +124,29 @@ export const BoxPublicSchema = {
             ],
             title: 'Owner Name'
         },
+        assignee_id: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Assignee Id'
+        },
+        assignee_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Assignee Name'
+        },
         doc_count: {
             type: 'integer',
             title: 'Doc Count'
@@ -271,7 +294,19 @@ export const DocPublicSchema = {
             format: 'uuid',
             title: 'Box Id'
         },
-        assignee_id: {
+        completed_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Completed At'
+        },
+        completed_by_id: {
             anyOf: [
                 {
                     type: 'string',
@@ -281,9 +316,9 @@ export const DocPublicSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Assignee Id'
+            title: 'Completed By Id'
         },
-        assignee_name: {
+        completed_by_name: {
             anyOf: [
                 {
                     type: 'string'
@@ -292,7 +327,7 @@ export const DocPublicSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Assignee Name'
+            title: 'Completed By Name'
         }
     },
     type: 'object',

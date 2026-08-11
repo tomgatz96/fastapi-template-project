@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { BoxesReadBoxesData, BoxesReadBoxesResponse, BoxesCreateBoxData, BoxesCreateBoxResponse, BoxesReadBoxData, BoxesReadBoxResponse, BoxesUpdateBoxData, BoxesUpdateBoxResponse, BoxesDeleteBoxData, BoxesDeleteBoxResponse, DocsReadDocsData, DocsReadDocsResponse, DocsCreateDocData, DocsCreateDocResponse, DocsReadDocData, DocsReadDocResponse, DocsUpdateDocData, DocsUpdateDocResponse, DocsDeleteDocData, DocsDeleteDocResponse, DocsClaimDocData, DocsClaimDocResponse, DocsUnclaimDocData, DocsUnclaimDocResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { BoxesReadBoxesData, BoxesReadBoxesResponse, BoxesCreateBoxData, BoxesCreateBoxResponse, BoxesReadBoxData, BoxesReadBoxResponse, BoxesUpdateBoxData, BoxesUpdateBoxResponse, BoxesDeleteBoxData, BoxesDeleteBoxResponse, BoxesClaimBoxData, BoxesClaimBoxResponse, BoxesUnclaimBoxData, BoxesUnclaimBoxResponse, DocsReadDocsData, DocsReadDocsResponse, DocsCreateDocData, DocsCreateDocResponse, DocsReadDocData, DocsReadDocResponse, DocsUpdateDocData, DocsUpdateDocResponse, DocsDeleteDocData, DocsDeleteDocResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class BoxesService {
     /**
@@ -72,7 +72,7 @@ export class BoxesService {
     
     /**
      * Update Box
-     * Update a box.
+     * Update a box. Owner or superuser only.
      * @param data The data for the request.
      * @param data.id
      * @param data.requestBody
@@ -96,7 +96,7 @@ export class BoxesService {
     
     /**
      * Delete Box
-     * Delete a box.
+     * Delete a box. Superusers only.
      * @param data The data for the request.
      * @param data.id
      * @returns Message Successful Response
@@ -106,6 +106,51 @@ export class BoxesService {
         return __request(OpenAPI, {
             method: 'DELETE',
             url: '/api/v1/boxes/{id}',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Claim Box
+     * Claim a box for yourself.
+     *
+     * A user may hold only one box at a time, and a box may be held by
+     * only one user. A user can only ever claim a box for themselves.
+     * @param data The data for the request.
+     * @param data.id
+     * @returns BoxPublic Successful Response
+     * @throws ApiError
+     */
+    public static claimBox(data: BoxesClaimBoxData): CancelablePromise<BoxesClaimBoxResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/boxes/{id}/claim',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Unclaim Box
+     * Release a box you have claimed. Superusers may release any box.
+     * @param data The data for the request.
+     * @param data.id
+     * @returns BoxPublic Successful Response
+     * @throws ApiError
+     */
+    public static unclaimBox(data: BoxesUnclaimBoxData): CancelablePromise<BoxesUnclaimBoxResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/boxes/{id}/unclaim',
             path: {
                 id: data.id
             },
@@ -140,7 +185,7 @@ export class DocsService {
     
     /**
      * Create Doc
-     * Create a new doc inside a box. Any authenticated user may add docs.
+     * Create a new doc inside a box.
      * @param data The data for the request.
      * @param data.boxId
      * @param data.requestBody
@@ -185,10 +230,10 @@ export class DocsService {
     
     /**
      * Update Doc
-     * Update a doc. Any authenticated user may edit docs in a shared box.
+     * Update a doc.
      *
-     * Note: the assignee cannot be changed here. Use /docs/{id}/claim
-     * and /docs/{id}/unclaim instead.
+     * Marking a doc completed records who did it and when, and releases the
+     * box if this was the last outstanding doc.
      * @param data The data for the request.
      * @param data.id
      * @param data.requestBody
@@ -222,49 +267,6 @@ export class DocsService {
         return __request(OpenAPI, {
             method: 'DELETE',
             url: '/api/v1/docs/{id}',
-            path: {
-                id: data.id
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Claim Doc
-     * Claim a doc for yourself. A user can only ever assign a doc to
-     * themselves, never to somebody else.
-     * @param data The data for the request.
-     * @param data.id
-     * @returns DocPublic Successful Response
-     * @throws ApiError
-     */
-    public static claimDoc(data: DocsClaimDocData): CancelablePromise<DocsClaimDocResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/docs/{id}/claim',
-            path: {
-                id: data.id
-            },
-            errors: {
-                422: 'Validation Error'
-            }
-        });
-    }
-    
-    /**
-     * Unclaim Doc
-     * Release a doc you have claimed. Superusers may release any doc.
-     * @param data The data for the request.
-     * @param data.id
-     * @returns DocPublic Successful Response
-     * @throws ApiError
-     */
-    public static unclaimDoc(data: DocsUnclaimDocData): CancelablePromise<DocsUnclaimDocResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/api/v1/docs/{id}/unclaim',
             path: {
                 id: data.id
             },

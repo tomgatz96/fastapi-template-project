@@ -5,6 +5,7 @@ import type { BoxPublic } from "@/client"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { BoxActionsMenu } from "./BoxActionsMenu"
+import ClaimBox from "./ClaimBox"
 
 export const columns: ColumnDef<BoxPublic>[] = [
   {
@@ -19,23 +20,6 @@ export const columns: ColumnDef<BoxPublic>[] = [
         {row.original.name}
       </Link>
     ),
-  },
-  {
-    accessorKey: "description",
-    header: "Description",
-    cell: ({ row }) => {
-      const description = row.original.description
-      return (
-        <span
-          className={cn(
-            "max-w-xs truncate block text-muted-foreground",
-            !description && "italic",
-          )}
-        >
-          {description || "No description"}
-        </span>
-      )
-    },
   },
   {
     accessorKey: "owner_name",
@@ -74,6 +58,25 @@ export const columns: ColumnDef<BoxPublic>[] = [
         <Badge variant="secondary">In progress</Badge>
       )
     },
+  },
+  {
+    id: "assignee",
+    header: "Working on it",
+    cell: ({ row }) => {
+      const name = row.original.assignee_name
+      return (
+        <span
+          className={cn("text-sm", name ? "" : "text-muted-foreground italic")}
+        >
+          {name ?? "Unclaimed"}
+        </span>
+      )
+    },
+  },
+  {
+    id: "claim",
+    header: () => <span className="sr-only">Claim</span>,
+    cell: ({ row }) => <ClaimBox box={row.original} />,
   },
   {
     id: "actions",

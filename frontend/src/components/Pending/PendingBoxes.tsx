@@ -18,6 +18,7 @@ const PendingBoxes = () => (
         <TableHead>Docs</TableHead>
         <TableHead>Pages</TableHead>
         <TableHead>Status</TableHead>
+        <TableHead>Working on it</TableHead>
         <TableHead>
           <span className="sr-only">Actions</span>
         </TableHead>
@@ -43,6 +44,9 @@ const PendingBoxes = () => (
           </TableCell>
           <TableCell>
             <Skeleton className="h-5 w-24 rounded-full" />
+          </TableCell>
+          <TableCell>
+            <Skeleton className="h-4 w-20" />
           </TableCell>
           <TableCell>
             <div className="flex justify-end">

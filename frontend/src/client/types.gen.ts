@@ -25,6 +25,8 @@ export type BoxPublic = {
     id: string;
     owner_id: string;
     owner_name?: (string | null);
+    assignee_id?: (string | null);
+    assignee_name?: (string | null);
     doc_count: number;
     total_pages: number;
     completed: boolean;
@@ -49,8 +51,9 @@ export type DocPublic = {
     pages?: number;
     id: string;
     box_id: string;
-    assignee_id?: (string | null);
-    assignee_name?: (string | null);
+    completed_at?: (string | null);
+    completed_by_id?: (string | null);
+    completed_by_name?: (string | null);
 };
 
 export type DocsPublic = {
@@ -178,6 +181,18 @@ export type BoxesDeleteBoxData = {
 
 export type BoxesDeleteBoxResponse = (Message);
 
+export type BoxesClaimBoxData = {
+    id: string;
+};
+
+export type BoxesClaimBoxResponse = (BoxPublic);
+
+export type BoxesUnclaimBoxData = {
+    id: string;
+};
+
+export type BoxesUnclaimBoxResponse = (BoxPublic);
+
 export type DocsReadDocsData = {
     boxId: string;
 };
@@ -209,18 +224,6 @@ export type DocsDeleteDocData = {
 };
 
 export type DocsDeleteDocResponse = (Message);
-
-export type DocsClaimDocData = {
-    id: string;
-};
-
-export type DocsClaimDocResponse = (DocPublic);
-
-export type DocsUnclaimDocData = {
-    id: string;
-};
-
-export type DocsUnclaimDocResponse = (DocPublic);
 
 export type LoginLoginAccessTokenData = {
     formData: Body_login_login_access_token;

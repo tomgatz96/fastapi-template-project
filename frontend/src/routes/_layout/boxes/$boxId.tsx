@@ -3,13 +3,15 @@ import { createFileRoute, Link } from "@tanstack/react-router"
 import { ArrowLeft, FileText } from "lucide-react"
 import { Suspense } from "react"
 
-import { BoxesService, DocsService } from "@/client"
+import { BoxesService, type BoxPublic, DocsService } from "@/client"
+import ClaimBox from "@/components/Boxes/ClaimBox"
 import { DataTable } from "@/components/Common/DataTable"
 import AddDoc from "@/components/Docs/AddDoc"
-import { columns } from "@/components/Docs/columns"
+import { getColumns } from "@/components/Docs/columns"
 import PendingDocs from "@/components/Pending/PendingDocs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import useAuth from "@/hooks/useAuth"
 
 function getBoxQueryOptions(boxId: string) {
   return {
@@ -36,37 +38,56 @@ export const Route = createFileRoute("/_layout/boxes/$boxId")({
   }),
 })
 
-function BoxHeader({ boxId }: { boxId: string }) {
-  const { data: box } = useSuspenseQuery(getBoxQueryOptions(boxId))
+function BoxHeader({ box }: { box: BoxPublic }) {
+  const { user: currentUser } = useAuth()
+  const holdsBox = box.assignee_id === currentUser?.id
+  const canEditDocs =
+    Boolean(currentUser?.is_superuser) || holdsBox || !box.assignee_id
 
   return (
-    <div className="flex items-start justify-between gap-4">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold tracking-tight">{box.name}</h1>
-        <p className="text-muted-foreground">
-          {box.description || "No description"}
-        </p>
-        <div className="flex items-center gap-2 pt-1">
-          <Badge variant="outline">
-            {box.doc_count} doc{box.doc_count === 1 ? "" : "s"}
-          </Badge>
-          <Badge variant="outline">{box.total_pages} pages</Badge>
-          {box.doc_count === 0 ? (
-            <Badge variant="outline">Empty</Badge>
-          ) : box.completed ? (
-            <Badge variant="default">Completed</Badge>
-          ) : (
-            <Badge variant="secondary">In progress</Badge>
-          )}
+    <div className="flex flex-col gap-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl font-bold tracking-tight">{box.name}</h1>
+          <p className="text-muted-foreground">
+            {box.description || "No description"}
+          </p>
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <Badge variant="outline">
+              {box.doc_count} doc{box.doc_count === 1 ? "" : "s"}
+            </Badge>
+            <Badge variant="outline">{box.total_pages} pages</Badge>
+            {box.doc_count === 0 ? (
+              <Badge variant="outline">Empty</Badge>
+            ) : box.completed ? (
+              <Badge variant="default">Completed</Badge>
+            ) : (
+              <Badge variant="secondary">In progress</Badge>
+            )}
+            {box.assignee_name ? (
+              <Badge variant="outline">
+                Claimed by {holdsBox ? "you" : box.assignee_name}
+              </Badge>
+            ) : null}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <ClaimBox box={box} size="default" />
+          {canEditDocs ? <AddDoc boxId={box.id} /> : null}
         </div>
       </div>
-      <AddDoc boxId={boxId} />
+
+      {!box.assignee_id && !box.completed && box.doc_count > 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Claim this box to start marking its docs as completed.
+        </p>
+      ) : null}
     </div>
   )
 }
 
-function DocsTableContent({ boxId }: { boxId: string }) {
-  const { data: docs } = useSuspenseQuery(getDocsQueryOptions(boxId))
+function DocsTableContent({ box }: { box: BoxPublic }) {
+  const { data: docs } = useSuspenseQuery(getDocsQueryOptions(box.id))
 
   if (docs.data.length === 0) {
     return (
@@ -80,7 +101,20 @@ function DocsTableContent({ boxId }: { boxId: string }) {
     )
   }
 
-  return <DataTable columns={columns} data={docs.data} />
+  return <DataTable columns={getColumns(box)} data={docs.data} />
+}
+
+function BoxContent({ boxId }: { boxId: string }) {
+  const { data: box } = useSuspenseQuery(getBoxQueryOptions(boxId))
+
+  return (
+    <>
+      <BoxHeader box={box} />
+      <Suspense fallback={<PendingDocs />}>
+        <DocsTableContent box={box} />
+      </Suspense>
+    </>
+  )
 }
 
 function BoxDetail() {
@@ -95,12 +129,8 @@ function BoxDetail() {
         </Link>
       </Button>
 
-      <Suspense fallback={<div className="h-24" />}>
-        <BoxHeader boxId={boxId} />
-      </Suspense>
-
       <Suspense fallback={<PendingDocs />}>
-        <DocsTableContent boxId={boxId} />
+        <BoxContent boxId={boxId} />
       </Suspense>
     </div>
   )

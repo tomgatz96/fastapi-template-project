@@ -1,17 +1,39 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import type { ColumnDef } from "@tanstack/react-table"
 
-import { type DocPublic, DocsService } from "@/client"
-import { Badge } from "@/components/ui/badge"
+import { type BoxPublic, type DocPublic, DocsService } from "@/client"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import useAuth from "@/hooks/useAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
-import ClaimDoc from "./ClaimDoc"
 import { DocActionsMenu } from "./DocActionsMenu"
 
-function CompletedToggle({ doc }: { doc: DocPublic }) {
+function formatCompletedAt(value: string | null | undefined): string {
+  if (!value) {
+    return ""
+  }
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return ""
+  }
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+}
+
+function CompletedToggle({ doc, box }: { doc: DocPublic; box?: BoxPublic }) {
   const queryClient = useQueryClient()
+  const { user: currentUser } = useAuth()
   const { showErrorToast } = useCustomToast()
 
   const mutation = useMutation({
@@ -28,96 +50,107 @@ function CompletedToggle({ doc }: { doc: DocPublic }) {
     },
   })
 
-  return (
+  const holdsBox = box?.assignee_id === currentUser?.id
+  const canComplete = Boolean(currentUser?.is_superuser) || holdsBox
+
+  const checkbox = (
     <Checkbox
       checked={doc.completed ?? false}
-      disabled={mutation.isPending}
+      disabled={mutation.isPending || !canComplete}
       onCheckedChange={(checked) => mutation.mutate(checked === true)}
       aria-label="Toggle completed"
     />
   )
-}
 
-function AssigneeCell({ doc }: { doc: DocPublic }) {
-  if (!doc.assignee_id) {
-    return (
-      <span className="text-muted-foreground italic text-sm">Unassigned</span>
-    )
+  if (canComplete) {
+    return checkbox
   }
 
   return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-sm">{doc.assignee_name}</span>
-      {doc.completed ? (
-        <Badge variant="secondary" className="w-fit text-xs">
-          Completed by {doc.assignee_name}
-        </Badge>
-      ) : null}
-    </div>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="inline-flex">{checkbox}</span>
+      </TooltipTrigger>
+      <TooltipContent>
+        {box?.assignee_id
+          ? `${box.assignee_name} is working on this box`
+          : "Claim this box before completing its docs"}
+      </TooltipContent>
+    </Tooltip>
   )
 }
 
-export const columns: ColumnDef<DocPublic>[] = [
-  {
-    id: "completed",
-    header: "Done",
-    cell: ({ row }) => <CompletedToggle doc={row.original} />,
-  },
-  {
-    accessorKey: "name",
-    header: "Name",
-    cell: ({ row }) => (
-      <span
-        className={cn(
-          "font-medium",
-          row.original.completed && "line-through text-muted-foreground",
-        )}
-      >
-        {row.original.name}
-      </span>
-    ),
-  },
-  {
-    accessorKey: "description",
-    header: "Description",
-    cell: ({ row }) => {
-      const description = row.original.description
-      return (
+export function getColumns(box?: BoxPublic): ColumnDef<DocPublic>[] {
+  return [
+    {
+      id: "completed",
+      header: "Done",
+      cell: ({ row }) => <CompletedToggle doc={row.original} box={box} />,
+    },
+    {
+      accessorKey: "name",
+      header: "Name",
+      cell: ({ row }) => (
         <span
           className={cn(
-            "max-w-xs truncate block text-muted-foreground",
-            !description && "italic",
+            "font-medium",
+            row.original.completed && "line-through text-muted-foreground",
           )}
         >
-          {description || "No description"}
+          {row.original.name}
         </span>
-      )
+      ),
     },
-  },
-  {
-    accessorKey: "pages",
-    header: "Pages",
-    cell: ({ row }) => (
-      <span className="tabular-nums">{row.original.pages ?? 0}</span>
-    ),
-  },
-  {
-    id: "assignee",
-    header: "Assignee",
-    cell: ({ row }) => <AssigneeCell doc={row.original} />,
-  },
-  {
-    id: "claim",
-    header: () => <span className="sr-only">Claim</span>,
-    cell: ({ row }) => <ClaimDoc doc={row.original} />,
-  },
-  {
-    id: "actions",
-    header: () => <span className="sr-only">Actions</span>,
-    cell: ({ row }) => (
-      <div className="flex justify-end">
-        <DocActionsMenu doc={row.original} />
-      </div>
-    ),
-  },
-]
+    {
+      accessorKey: "description",
+      header: "Description",
+      cell: ({ row }) => {
+        const description = row.original.description
+        return (
+          <span
+            className={cn(
+              "max-w-xs truncate block text-muted-foreground",
+              !description && "italic",
+            )}
+          >
+            {description || "No description"}
+          </span>
+        )
+      },
+    },
+    {
+      accessorKey: "pages",
+      header: "Pages",
+      cell: ({ row }) => (
+        <span className="tabular-nums">{row.original.pages ?? 0}</span>
+      ),
+    },
+    {
+      id: "completed_by",
+      header: "Completed",
+      cell: ({ row }) => {
+        const { completed, completed_by_name, completed_at } = row.original
+        if (!completed) {
+          return <span className="text-muted-foreground italic text-sm">—</span>
+        }
+        return (
+          <div className="flex flex-col gap-0.5 text-sm">
+            <span>{completed_by_name ?? "Unknown user"}</span>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {formatCompletedAt(completed_at)}
+            </span>
+          </div>
+        )
+      },
+    },
+    {
+      id: "actions",
+      header: () => <span className="sr-only">Actions</span>,
+      cell: ({ row }) => (
+        <div className="flex justify-end">
+          <DocActionsMenu doc={row.original} />
+        </div>
+      ),
+    },
+  ]
+}
