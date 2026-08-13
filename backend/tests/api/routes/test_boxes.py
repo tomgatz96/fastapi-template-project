@@ -421,3 +421,53 @@ def test_releasing_box_frees_user_to_claim_another(
         json={"completed": True},
     )
     assert _claim(client, normal_user_token_headers, str(other.id)).status_code == 200
+
+
+# --- Boxes outlive their owner ---
+
+
+def test_box_survives_owner_deletion(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    """Deleting a user must not delete the boxes they created."""
+    box = create_random_box(db)
+    owner_id = box.owner_id
+    assert owner_id is not None
+
+    response = client.delete(
+        f"{settings.API_V1_STR}/users/{owner_id}", headers=superuser_token_headers
+    )
+    assert response.status_code == 200
+
+    fetched = client.get(
+        f"{settings.API_V1_STR}/boxes/{box.id}", headers=superuser_token_headers
+    )
+    assert fetched.status_code == 200
+    content = fetched.json()
+    assert content["id"] == str(box.id)
+    assert content["owner_id"] is None
+    assert content["owner_name"] is None
+
+
+def test_docs_survive_owner_deletion(
+    client: TestClient, superuser_token_headers: dict[str, str], db: Session
+) -> None:
+    """The docs inside an orphaned box survive too."""
+    box = create_random_box(db)
+    owner_id = box.owner_id
+    _add_doc(client, superuser_token_headers, str(box.id), name="Keep me", pages=7)
+
+    assert (
+        client.delete(
+            f"{settings.API_V1_STR}/users/{owner_id}", headers=superuser_token_headers
+        ).status_code
+        == 200
+    )
+
+    docs = client.get(
+        f"{settings.API_V1_STR}/boxes/{box.id}/docs/", headers=superuser_token_headers
+    )
+    assert docs.status_code == 200
+    content = docs.json()
+    assert content["count"] == 1
+    assert content["data"][0]["name"] == "Keep me"

@@ -55,7 +55,6 @@ class User(UserBase, table=True):
     )
     boxes: list["Box"] = Relationship(
         back_populates="owner",
-        cascade_delete=True,
         sa_relationship_kwargs={"foreign_keys": "Box.owner_id"},
     )
     claimed_box: "Box" = Relationship(
@@ -96,8 +95,8 @@ class BoxUpdate(SQLModel):
 
 class Box(BoxBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    owner_id: uuid.UUID = Field(
-        foreign_key="user.id", nullable=False, ondelete="CASCADE"
+    owner_id: uuid.UUID | None = Field(
+        default=None, foreign_key="user.id", nullable=True, ondelete="SET NULL"
     )
     owner: User | None = Relationship(
         back_populates="boxes", sa_relationship_kwargs={"foreign_keys": "Box.owner_id"}
@@ -118,7 +117,7 @@ class Box(BoxBase, table=True):
 
 class BoxPublic(BoxBase):
     id: uuid.UUID
-    owner_id: uuid.UUID
+    owner_id: uuid.UUID | None = None
     owner_name: str | None = None
     assignee_id: uuid.UUID | None = None
     assignee_name: str | None = None
