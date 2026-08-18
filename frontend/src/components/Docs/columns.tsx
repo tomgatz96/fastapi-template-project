@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import type { ColumnDef } from "@tanstack/react-table"
 
 import { type BoxPublic, type DocPublic, DocsService } from "@/client"
+import { formatTimestamp, stageMeta } from "@/components/Boxes/stages"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Tooltip,
@@ -14,34 +15,14 @@ import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
 import { DocActionsMenu } from "./DocActionsMenu"
 
-function formatCompletedAt(value: string | null | undefined): string {
-  if (!value) {
-    return ""
-  }
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return ""
-  }
-  return date.toLocaleString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-}
-
-function CompletedToggle({ doc, box }: { doc: DocPublic; box?: BoxPublic }) {
+function CompletedToggle({ doc, box }: { doc: DocPublic; box: BoxPublic }) {
   const queryClient = useQueryClient()
   const { user: currentUser } = useAuth()
   const { showErrorToast } = useCustomToast()
 
   const mutation = useMutation({
     mutationFn: (completed: boolean) =>
-      DocsService.updateDoc({
-        id: doc.id,
-        requestBody: { completed },
-      }),
+      DocsService.updateDoc({ id: doc.id, requestBody: { completed } }),
     onError: handleError.bind(showErrorToast),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["docs", doc.box_id] })
@@ -50,15 +31,17 @@ function CompletedToggle({ doc, box }: { doc: DocPublic; box?: BoxPublic }) {
     },
   })
 
-  const holdsBox = box?.assignee_id === currentUser?.id
-  const canComplete = Boolean(currentUser?.is_superuser) || holdsBox
+  const holdsBox = box.assignee_id === currentUser?.id
+  const isFinished = box.stage === "completed"
+  const canComplete =
+    !isFinished && (Boolean(currentUser?.is_superuser) || holdsBox)
 
   const checkbox = (
     <Checkbox
       checked={doc.completed ?? false}
       disabled={mutation.isPending || !canComplete}
       onCheckedChange={(checked) => mutation.mutate(checked === true)}
-      aria-label="Toggle completed"
+      aria-label={`Mark as ${stageMeta(box.stage).verb}`}
     />
   )
 
@@ -72,15 +55,19 @@ function CompletedToggle({ doc, box }: { doc: DocPublic; box?: BoxPublic }) {
         <span className="inline-flex">{checkbox}</span>
       </TooltipTrigger>
       <TooltipContent>
-        {box?.assignee_id
-          ? `${box.assignee_name} is working on this box`
-          : "Claim this box before completing its docs"}
+        {isFinished
+          ? "This box is completed"
+          : box.assignee_id
+            ? `${box.assignee_name} is working on this box`
+            : "Claim this box before marking its docs"}
       </TooltipContent>
     </Tooltip>
   )
 }
 
-export function getColumns(box?: BoxPublic): ColumnDef<DocPublic>[] {
+export function getColumns(box: BoxPublic): ColumnDef<DocPublic>[] {
+  const meta = stageMeta(box.stage)
+
   return [
     {
       id: "completed",
@@ -126,18 +113,19 @@ export function getColumns(box?: BoxPublic): ColumnDef<DocPublic>[] {
       ),
     },
     {
-      id: "completed_by",
-      header: "Completed",
+      id: "stage_record",
+      header: meta.label === "Completed" ? "Checked by" : `${meta.label} by`,
       cell: ({ row }) => {
-        const { completed, completed_by_name, completed_at } = row.original
-        if (!completed) {
+        const name = row.original[meta.nameField]
+        const at = row.original[meta.atField]
+        if (!name) {
           return <span className="text-muted-foreground italic text-sm">—</span>
         }
         return (
           <div className="flex flex-col gap-0.5 text-sm">
-            <span>{completed_by_name ?? "Unknown user"}</span>
+            <span>{String(name)}</span>
             <span className="text-xs text-muted-foreground tabular-nums">
-              {formatCompletedAt(completed_at)}
+              {formatTimestamp(at)}
             </span>
           </div>
         )

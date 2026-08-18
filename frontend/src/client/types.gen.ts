@@ -23,14 +23,18 @@ export type BoxPublic = {
     name: string;
     description?: (string | null);
     id: string;
-    owner_id: string;
+    owner_id?: (string | null);
     owner_name?: (string | null);
     assignee_id?: (string | null);
     assignee_name?: (string | null);
+    stage: BoxStage;
     doc_count: number;
+    stage_done_count: number;
     total_pages: number;
     completed: boolean;
 };
+
+export type BoxStage = 'preparation' | 'scan' | 'quality_control' | 'completed';
 
 export type BoxUpdate = {
     name?: (string | null);
@@ -40,20 +44,22 @@ export type BoxUpdate = {
 export type DocCreate = {
     name: string;
     description?: (string | null);
-    completed?: boolean;
     pages?: number;
 };
 
 export type DocPublic = {
     name: string;
     description?: (string | null);
-    completed?: boolean;
     pages?: number;
     id: string;
     box_id: string;
-    completed_at?: (string | null);
-    completed_by_id?: (string | null);
-    completed_by_name?: (string | null);
+    completed?: boolean;
+    prepared_at?: (string | null);
+    prepared_by_name?: (string | null);
+    scanned_at?: (string | null);
+    scanned_by_name?: (string | null);
+    checked_at?: (string | null);
+    checked_by_name?: (string | null);
 };
 
 export type DocsPublic = {
@@ -64,8 +70,8 @@ export type DocsPublic = {
 export type DocUpdate = {
     name?: (string | null);
     description?: (string | null);
-    completed?: (boolean | null);
     pages?: (number | null);
+    completed?: (boolean | null);
 };
 
 export type HTTPValidationError = {
@@ -152,6 +158,7 @@ export type ValidationError = {
 export type BoxesReadBoxesData = {
     limit?: number;
     skip?: number;
+    stage?: (BoxStage | null);
 };
 
 export type BoxesReadBoxesResponse = (BoxesPublic);
@@ -192,6 +199,12 @@ export type BoxesUnclaimBoxData = {
 };
 
 export type BoxesUnclaimBoxResponse = (BoxPublic);
+
+export type BoxesRejectBoxData = {
+    id: string;
+};
+
+export type BoxesRejectBoxResponse = (BoxPublic);
 
 export type DocsReadDocsData = {
     boxId: string;

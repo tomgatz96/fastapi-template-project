@@ -7,7 +7,6 @@ import { z } from "zod"
 
 import { type DocCreate, DocsService } from "@/client"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogClose,
@@ -38,7 +37,6 @@ const formSchema = z.object({
     .number({ message: "Pages must be a number" })
     .int({ message: "Pages must be a whole number" })
     .min(0, { message: "Pages cannot be negative" }),
-  completed: z.boolean(),
 })
 
 type FormData = z.infer<typeof formSchema>
@@ -60,7 +58,6 @@ const AddDoc = ({ boxId }: AddDocProps) => {
       name: "",
       description: "",
       pages: 0,
-      completed: false,
     },
   })
 
@@ -85,7 +82,6 @@ const AddDoc = ({ boxId }: AddDocProps) => {
       name: data.name,
       description: data.description,
       pages: data.pages,
-      completed: data.completed,
     })
   }
 
@@ -165,23 +161,6 @@ const AddDoc = ({ boxId }: AddDocProps) => {
                         }
                       />
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="completed"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center gap-2">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel className="!mt-0">Mark as completed</FormLabel>
                     <FormMessage />
                   </FormItem>
                 )}

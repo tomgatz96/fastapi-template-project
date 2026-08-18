@@ -3,13 +3,14 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { BoxesReadBoxesData, BoxesReadBoxesResponse, BoxesCreateBoxData, BoxesCreateBoxResponse, BoxesReadBoxData, BoxesReadBoxResponse, BoxesUpdateBoxData, BoxesUpdateBoxResponse, BoxesDeleteBoxData, BoxesDeleteBoxResponse, BoxesClaimBoxData, BoxesClaimBoxResponse, BoxesUnclaimBoxData, BoxesUnclaimBoxResponse, DocsReadDocsData, DocsReadDocsResponse, DocsCreateDocData, DocsCreateDocResponse, DocsReadDocData, DocsReadDocResponse, DocsUpdateDocData, DocsUpdateDocResponse, DocsDeleteDocData, DocsDeleteDocResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { BoxesReadBoxesData, BoxesReadBoxesResponse, BoxesCreateBoxData, BoxesCreateBoxResponse, BoxesReadBoxData, BoxesReadBoxResponse, BoxesUpdateBoxData, BoxesUpdateBoxResponse, BoxesDeleteBoxData, BoxesDeleteBoxResponse, BoxesClaimBoxData, BoxesClaimBoxResponse, BoxesUnclaimBoxData, BoxesUnclaimBoxResponse, BoxesRejectBoxData, BoxesRejectBoxResponse, DocsReadDocsData, DocsReadDocsResponse, DocsCreateDocData, DocsCreateDocResponse, DocsReadDocData, DocsReadDocResponse, DocsUpdateDocData, DocsUpdateDocResponse, DocsDeleteDocData, DocsDeleteDocResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class BoxesService {
     /**
      * Read Boxes
-     * Retrieve boxes. Boxes are shared: every authenticated user sees all boxes.
+     * Retrieve boxes, optionally filtered to a single pipeline stage.
      * @param data The data for the request.
+     * @param data.stage
      * @param data.skip
      * @param data.limit
      * @returns BoxesPublic Successful Response
@@ -20,6 +21,7 @@ export class BoxesService {
             method: 'GET',
             url: '/api/v1/boxes/',
             query: {
+                stage: data.stage,
                 skip: data.skip,
                 limit: data.limit
             },
@@ -31,7 +33,7 @@ export class BoxesService {
     
     /**
      * Create Box
-     * Create new box.
+     * Create new box. New boxes enter the pipeline at preparation.
      * @param data The data for the request.
      * @param data.requestBody
      * @returns BoxPublic Successful Response
@@ -117,10 +119,7 @@ export class BoxesService {
     
     /**
      * Claim Box
-     * Claim a box for yourself.
-     *
-     * A user may hold only one box at a time, and a box may be held by
-     * only one user. A user can only ever claim a box for themselves.
+     * Claim a box for yourself. A user may hold only one box at a time.
      * @param data The data for the request.
      * @param data.id
      * @returns BoxPublic Successful Response
@@ -151,6 +150,31 @@ export class BoxesService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/api/v1/boxes/{id}/unclaim',
+            path: {
+                id: data.id
+            },
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+    
+    /**
+     * Reject Box
+     * Send a box back one stage because problems were found.
+     *
+     * Clears the records for both the current stage (partial work) and the
+     * stage being returned to, so that work is genuinely redone, and
+     * releases the box back to the pool.
+     * @param data The data for the request.
+     * @param data.id
+     * @returns BoxPublic Successful Response
+     * @throws ApiError
+     */
+    public static rejectBox(data: BoxesRejectBoxData): CancelablePromise<BoxesRejectBoxResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/api/v1/boxes/{id}/reject',
             path: {
                 id: data.id
             },
@@ -232,8 +256,8 @@ export class DocsService {
      * Update Doc
      * Update a doc.
      *
-     * Marking a doc completed records who did it and when, and releases the
-     * box if this was the last outstanding doc.
+     * `completed` applies to the stage the box is currently in: it records
+     * who did the work and when, and advances the box once every doc is done.
      * @param data The data for the request.
      * @param data.id
      * @param data.requestBody

@@ -14,10 +14,10 @@ const PendingBoxes = () => (
       <TableRow>
         <TableHead>Name</TableHead>
         <TableHead>Description</TableHead>
-        <TableHead>Owner</TableHead>
+        <TableHead>Description</TableHead>
         <TableHead>Docs</TableHead>
         <TableHead>Pages</TableHead>
-        <TableHead>Status</TableHead>
+        <TableHead>Progress</TableHead>
         <TableHead>Working on it</TableHead>
         <TableHead>
           <span className="sr-only">Actions</span>

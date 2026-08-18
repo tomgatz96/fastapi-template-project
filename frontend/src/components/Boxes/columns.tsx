@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { BoxActionsMenu } from "./BoxActionsMenu"
 import ClaimBox from "./ClaimBox"
+import { stageMeta } from "./stages"
 
 export const columns: ColumnDef<BoxPublic>[] = [
   {
@@ -22,13 +23,21 @@ export const columns: ColumnDef<BoxPublic>[] = [
     ),
   },
   {
-    accessorKey: "owner_name",
-    header: "Owner",
-    cell: ({ row }) => (
-      <span className="text-sm text-muted-foreground">
-        {row.original.owner_name ?? "Unknown"}
-      </span>
-    ),
+    accessorKey: "description",
+    header: "Description",
+    cell: ({ row }) => {
+      const description = row.original.description
+      return (
+        <span
+          className={cn(
+            "max-w-xs truncate block text-muted-foreground",
+            !description && "italic",
+          )}
+        >
+          {description || "No description"}
+        </span>
+      )
+    },
   },
   {
     accessorKey: "doc_count",
@@ -45,17 +54,20 @@ export const columns: ColumnDef<BoxPublic>[] = [
     ),
   },
   {
-    accessorKey: "completed",
-    header: "Status",
+    id: "progress",
+    header: "Progress",
     cell: ({ row }) => {
-      const { completed, doc_count } = row.original
+      const { stage, doc_count, stage_done_count } = row.original
+      if (stage === "completed") {
+        return <Badge variant="default">Done</Badge>
+      }
       if (doc_count === 0) {
         return <Badge variant="outline">Empty</Badge>
       }
-      return completed ? (
-        <Badge variant="default">Completed</Badge>
-      ) : (
-        <Badge variant="secondary">In progress</Badge>
+      return (
+        <span className="text-sm tabular-nums text-muted-foreground">
+          {stage_done_count} of {doc_count} {stageMeta(stage).verb}
+        </span>
       )
     },
   },

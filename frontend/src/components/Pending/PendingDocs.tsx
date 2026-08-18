@@ -16,7 +16,7 @@ const PendingDocs = () => (
         <TableHead>Name</TableHead>
         <TableHead>Description</TableHead>
         <TableHead>Pages</TableHead>
-        <TableHead>Completed</TableHead>
+        <TableHead>Completed by</TableHead>
         <TableHead>
           <span className="sr-only">Actions</span>
         </TableHead>

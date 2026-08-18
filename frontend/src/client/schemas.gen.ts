@@ -109,8 +109,15 @@ export const BoxPublicSchema = {
             title: 'Id'
         },
         owner_id: {
-            type: 'string',
-            format: 'uuid',
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'uuid'
+                },
+                {
+                    type: 'null'
+                }
+            ],
             title: 'Owner Id'
         },
         owner_name: {
@@ -147,9 +154,16 @@ export const BoxPublicSchema = {
             ],
             title: 'Assignee Name'
         },
+        stage: {
+            '$ref': '#/components/schemas/BoxStage'
+        },
         doc_count: {
             type: 'integer',
             title: 'Doc Count'
+        },
+        stage_done_count: {
+            type: 'integer',
+            title: 'Stage Done Count'
         },
         total_pages: {
             type: 'integer',
@@ -161,8 +175,14 @@ export const BoxPublicSchema = {
         }
     },
     type: 'object',
-    required: ['name', 'id', 'owner_id', 'doc_count', 'total_pages', 'completed'],
+    required: ['name', 'id', 'stage', 'doc_count', 'stage_done_count', 'total_pages', 'completed'],
     title: 'BoxPublic'
+} as const;
+
+export const BoxStageSchema = {
+    type: 'string',
+    enum: ['preparation', 'scan', 'quality_control', 'completed'],
+    title: 'BoxStage'
 } as const;
 
 export const BoxUpdateSchema = {
@@ -236,11 +256,6 @@ export const DocCreateSchema = {
             ],
             title: 'Description'
         },
-        completed: {
-            type: 'boolean',
-            title: 'Completed',
-            default: false
-        },
         pages: {
             type: 'integer',
             minimum: 0,
@@ -273,11 +288,6 @@ export const DocPublicSchema = {
             ],
             title: 'Description'
         },
-        completed: {
-            type: 'boolean',
-            title: 'Completed',
-            default: false
-        },
         pages: {
             type: 'integer',
             minimum: 0,
@@ -294,7 +304,12 @@ export const DocPublicSchema = {
             format: 'uuid',
             title: 'Box Id'
         },
-        completed_at: {
+        completed: {
+            type: 'boolean',
+            title: 'Completed',
+            default: false
+        },
+        prepared_at: {
             anyOf: [
                 {
                     type: 'string',
@@ -304,21 +319,9 @@ export const DocPublicSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Completed At'
+            title: 'Prepared At'
         },
-        completed_by_id: {
-            anyOf: [
-                {
-                    type: 'string',
-                    format: 'uuid'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Completed By Id'
-        },
-        completed_by_name: {
+        prepared_by_name: {
             anyOf: [
                 {
                     type: 'string'
@@ -327,7 +330,53 @@ export const DocPublicSchema = {
                     type: 'null'
                 }
             ],
-            title: 'Completed By Name'
+            title: 'Prepared By Name'
+        },
+        scanned_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Scanned At'
+        },
+        scanned_by_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Scanned By Name'
+        },
+        checked_at: {
+            anyOf: [
+                {
+                    type: 'string',
+                    format: 'date-time'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Checked At'
+        },
+        checked_by_name: {
+            anyOf: [
+                {
+                    type: 'string'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Checked By Name'
         }
     },
     type: 'object',
@@ -362,17 +411,6 @@ export const DocUpdateSchema = {
             ],
             title: 'Description'
         },
-        completed: {
-            anyOf: [
-                {
-                    type: 'boolean'
-                },
-                {
-                    type: 'null'
-                }
-            ],
-            title: 'Completed'
-        },
         pages: {
             anyOf: [
                 {
@@ -384,6 +422,17 @@ export const DocUpdateSchema = {
                 }
             ],
             title: 'Pages'
+        },
+        completed: {
+            anyOf: [
+                {
+                    type: 'boolean'
+                },
+                {
+                    type: 'null'
+                }
+            ],
+            title: 'Completed'
         }
     },
     type: 'object',
