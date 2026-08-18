@@ -2,7 +2,9 @@ import uuid
 from datetime import UTC, datetime
 
 from pydantic import EmailStr
-from sqlalchemy import DateTime
+from enum import Enum
+
+from sqlalchemy import DateTime, String
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -64,7 +66,6 @@ class User(UserBase, table=True):
             "foreign_keys": "Box.assignee_id",
         },
     )
-    completed_docs: list["Doc"] = Relationship(back_populates="completed_by")
 
 
 class UserPublic(UserBase):
@@ -75,6 +76,13 @@ class UserPublic(UserBase):
 class UsersPublic(SQLModel):
     data: list[UserPublic]
     count: int
+
+
+class BoxStage(str, Enum):
+    PREPARATION = "preparation"
+    SCAN = "scan"
+    QUALITY_CONTROL = "quality_control"
+    COMPLETED = "completed"
 
 
 # --- Box models ---
@@ -101,6 +109,11 @@ class Box(BoxBase, table=True):
     owner: User | None = Relationship(
         back_populates="boxes", sa_relationship_kwargs={"foreign_keys": "Box.owner_id"}
     )
+    stage: BoxStage = Field(
+        default=BoxStage.PREPARATION,
+        sa_type=String(length=32),  # type: ignore
+        index=True,
+    )
     assignee_id: uuid.UUID | None = Field(
         default=None,
         foreign_key="user.id",
@@ -121,7 +134,9 @@ class BoxPublic(BoxBase):
     owner_name: str | None = None
     assignee_id: uuid.UUID | None = None
     assignee_name: str | None = None
+    stage: BoxStage
     doc_count: int
+    stage_done_count: int
     total_pages: int
     completed: bool
 
@@ -136,7 +151,6 @@ class BoxesPublic(SQLModel):
 class DocBase(SQLModel):
     name: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=1000)
-    completed: bool = Field(default=False)
     pages: int = Field(default=0, ge=0)
 
 
@@ -147,8 +161,8 @@ class DocCreate(DocBase):
 class DocUpdate(SQLModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=1000)
-    completed: bool | None = None
     pages: int | None = Field(default=None, ge=0)
+    completed: bool | None = None
 
 
 class Doc(DocBase, table=True):
@@ -157,23 +171,51 @@ class Doc(DocBase, table=True):
         foreign_key="box.id", nullable=False, ondelete="CASCADE"
     )
     box: Box | None = Relationship(back_populates="docs")
-    completed_at: datetime | None = Field(
+    prepared_at: datetime | None = Field(
         default=None,
         sa_type=DateTime(timezone=True),  # type: ignore
         nullable=True,
     )
-    completed_by_id: uuid.UUID | None = Field(
+    prepared_by_id: uuid.UUID | None = Field(
         default=None, foreign_key="user.id", nullable=True, ondelete="SET NULL"
     )
-    completed_by: User | None = Relationship(back_populates="completed_docs")
+    prepared_by: User | None = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "Doc.prepared_by_id"}
+    )
+    scanned_at: datetime | None = Field(
+        default=None,
+        sa_type=DateTime(timezone=True),  # type: ignore
+        nullable=True,
+    )
+    scanned_by_id: uuid.UUID | None = Field(
+        default=None, foreign_key="user.id", nullable=True, ondelete="SET NULL"
+    )
+    scanned_by: User | None = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "Doc.scanned_by_id"}
+    )
+    checked_at: datetime | None = Field(
+        default=None,
+        sa_type=DateTime(timezone=True),  # type: ignore
+        nullable=True,
+    )
+    checked_by_id: uuid.UUID | None = Field(
+        default=None, foreign_key="user.id", nullable=True, ondelete="SET NULL"
+    )
+    checked_by: User | None = Relationship(
+        sa_relationship_kwargs={"foreign_keys": "Doc.checked_by_id"}
+    )
 
 
 class DocPublic(DocBase):
     id: uuid.UUID
     box_id: uuid.UUID
-    completed_at: datetime | None = None
-    completed_by_id: uuid.UUID | None = None
-    completed_by_name: str | None = None
+    completed: bool = False
+    prepared_at: datetime | None = None
+    prepared_by_name: str | None = None
+    scanned_at: datetime | None = None
+    scanned_by_name: str | None = None
+    checked_at: datetime | None = None
+    checked_by_name: str | None = None
 
 
 class DocsPublic(SQLModel):

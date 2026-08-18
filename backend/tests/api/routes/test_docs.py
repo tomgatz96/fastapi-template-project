@@ -40,7 +40,7 @@ def test_create_doc(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
     box = create_random_box(db)
-    data = {"name": "Foo", "description": "Fighters", "completed": False, "pages": 25}
+    data = {"name": "Foo", "description": "Fighters", "pages": 25}
     response = client.post(
         f"{settings.API_V1_STR}/boxes/{box.id}/docs/",
         headers=superuser_token_headers,
@@ -52,9 +52,10 @@ def test_create_doc(
     assert content["pages"] == 25
     assert content["completed"] is False
     assert content["box_id"] == str(box.id)
-    assert content["completed_at"] is None
-    assert content["completed_by_id"] is None
-    assert content["completed_by_name"] is None
+    assert content["prepared_at"] is None
+    assert content["prepared_by_name"] is None
+    assert content["scanned_at"] is None
+    assert content["checked_at"] is None
 
 
 def test_create_doc_in_unclaimed_box_by_any_user(
@@ -237,9 +238,8 @@ def test_complete_doc_records_who_and_when(
     assert response.status_code == 200
     content = response.json()
     assert content["completed"] is True
-    assert content["completed_at"] is not None
-    assert content["completed_by_id"] is not None
-    assert content["completed_by_name"] is not None
+    assert content["prepared_at"] is not None
+    assert content["prepared_by_name"] is not None
 
 
 def test_uncomplete_doc_clears_completion(
@@ -255,9 +255,8 @@ def test_uncomplete_doc_clears_completion(
     assert response.status_code == 200
     content = response.json()
     assert content["completed"] is False
-    assert content["completed_at"] is None
-    assert content["completed_by_id"] is None
-    assert content["completed_by_name"] is None
+    assert content["prepared_at"] is None
+    assert content["prepared_by_name"] is None
 
 
 def test_editing_other_fields_keeps_completion_intact(
@@ -277,8 +276,8 @@ def test_editing_other_fields_keeps_completion_intact(
     assert response.status_code == 200
     content = response.json()
     assert content["name"] == "Renamed"
-    assert content["completed_at"] == completed["completed_at"]
-    assert content["completed_by_id"] == completed["completed_by_id"]
+    assert content["prepared_at"] == completed["prepared_at"]
+    assert content["prepared_by_name"] == completed["prepared_by_name"]
 
 
 def test_superuser_can_complete_without_claiming(
@@ -289,16 +288,4 @@ def test_superuser_can_complete_without_claiming(
     create_random_doc(db, box_id=box.id)
     response = _complete(client, superuser_token_headers, str(doc_a.id))
     assert response.status_code == 200
-    assert response.json()["completed_by_name"] is not None
-
-
-def test_create_doc_completed_requires_holding_box(
-    client: TestClient, normal_user_token_headers: dict[str, str], db: Session
-) -> None:
-    box = create_random_box(db)
-    response = client.post(
-        f"{settings.API_V1_STR}/boxes/{box.id}/docs/",
-        headers=normal_user_token_headers,
-        json={"name": "Done already", "pages": 1, "completed": True},
-    )
-    assert response.status_code == 403
+    assert response.json()["prepared_by_name"] is not None

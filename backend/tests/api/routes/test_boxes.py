@@ -61,7 +61,9 @@ def test_create_box(
     assert content["owner_name"] is not None
     assert content["assignee_id"] is None
     assert content["assignee_name"] is None
+    assert content["stage"] == "preparation"
     assert content["doc_count"] == 0
+    assert content["stage_done_count"] == 0
     assert content["total_pages"] == 0
     assert content["completed"] is False
 
@@ -217,7 +219,9 @@ def test_box_completed_false_when_empty(
     content = client.get(
         f"{settings.API_V1_STR}/boxes/{box.id}", headers=superuser_token_headers
     ).json()
+    assert content["stage"] == "preparation"
     assert content["doc_count"] == 0
+    assert content["stage_done_count"] == 0
     assert content["total_pages"] == 0
     assert content["completed"] is False
 
@@ -297,29 +301,6 @@ def test_claim_second_box_after_releasing_first(
     assert _claim(client, normal_user_token_headers, str(second_box.id)).status_code == 200
 
 
-def test_claim_completed_box_is_rejected(
-    client: TestClient,
-    superuser_token_headers: dict[str, str],
-    normal_user_token_headers: dict[str, str],
-    db: Session,
-) -> None:
-    box = create_random_box(db)
-    _add_doc(client, superuser_token_headers, str(box.id))
-    assert _claim(client, superuser_token_headers, str(box.id)).status_code == 200
-    docs = client.get(
-        f"{settings.API_V1_STR}/boxes/{box.id}/docs/", headers=superuser_token_headers
-    ).json()["data"]
-    client.put(
-        f"{settings.API_V1_STR}/docs/{docs[0]['id']}",
-        headers=superuser_token_headers,
-        json={"completed": True},
-    )
-
-    response = _claim(client, normal_user_token_headers, str(box.id))
-    assert response.status_code == 409
-    assert response.json()["detail"] == "This box is already completed"
-
-
 def test_claim_box_not_found(
     client: TestClient, normal_user_token_headers: dict[str, str]
 ) -> None:
@@ -375,38 +356,6 @@ def test_superuser_can_unclaim_any_box(
 # --- Auto-release ---
 
 
-def test_box_is_released_when_last_doc_completed(
-    client: TestClient, normal_user_token_headers: dict[str, str], db: Session
-) -> None:
-    box = create_random_box(db)
-    doc_a = _add_doc(client, normal_user_token_headers, str(box.id), name="A")
-    doc_b = _add_doc(client, normal_user_token_headers, str(box.id), name="B")
-    assert _claim(client, normal_user_token_headers, str(box.id)).status_code == 200
-
-    client.put(
-        f"{settings.API_V1_STR}/docs/{doc_a['id']}",
-        headers=normal_user_token_headers,
-        json={"completed": True},
-    )
-    still_held = client.get(
-        f"{settings.API_V1_STR}/boxes/{box.id}", headers=normal_user_token_headers
-    ).json()
-    assert still_held["assignee_id"] is not None
-    assert still_held["completed"] is False
-
-    client.put(
-        f"{settings.API_V1_STR}/docs/{doc_b['id']}",
-        headers=normal_user_token_headers,
-        json={"completed": True},
-    )
-    released = client.get(
-        f"{settings.API_V1_STR}/boxes/{box.id}", headers=normal_user_token_headers
-    ).json()
-    assert released["completed"] is True
-    assert released["assignee_id"] is None
-    assert released["assignee_name"] is None
-
-
 def test_releasing_box_frees_user_to_claim_another(
     client: TestClient, normal_user_token_headers: dict[str, str], db: Session
 ) -> None:
@@ -420,6 +369,7 @@ def test_releasing_box_frees_user_to_claim_another(
         headers=normal_user_token_headers,
         json={"completed": True},
     )
+    # completing the last doc advanced the box and released it
     assert _claim(client, normal_user_token_headers, str(other.id)).status_code == 200
 
 

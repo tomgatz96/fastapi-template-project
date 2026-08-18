@@ -6,9 +6,16 @@ from fastapi import APIRouter, HTTPException
 from sqlmodel import select
 
 from app.api.deps import CurrentUser, SessionDep
-from app.api.routes.boxes import display_name, is_box_completed
+from app.api.routes.boxes import (
+    STAGE_FIELDS,
+    display_name,
+    doc_done_in_stage,
+    is_stage_finished,
+    next_stage,
+)
 from app.models import (
     Box,
+    BoxStage,
     Doc,
     DocCreate,
     DocPublic,
@@ -21,17 +28,20 @@ from app.models import (
 router = APIRouter(tags=["docs"])
 
 
-def _to_public(doc: Doc) -> DocPublic:
+def _to_public(doc: Doc, box: Box) -> DocPublic:
     return DocPublic(
         id=doc.id,
         name=doc.name,
         description=doc.description,
-        completed=doc.completed,
         pages=doc.pages,
         box_id=doc.box_id,
-        completed_at=doc.completed_at,
-        completed_by_id=doc.completed_by_id,
-        completed_by_name=display_name(doc.completed_by),
+        completed=doc_done_in_stage(doc, box.stage),
+        prepared_at=doc.prepared_at,
+        prepared_by_name=display_name(doc.prepared_by),
+        scanned_at=doc.scanned_at,
+        scanned_by_name=display_name(doc.scanned_by),
+        checked_at=doc.checked_at,
+        checked_by_name=display_name(doc.checked_by),
     )
 
 
@@ -50,48 +60,71 @@ def _get_doc(session: SessionDep, id: uuid.UUID) -> Doc:
 
 
 def _require_edit_access(box: Box, current_user: User) -> None:
-    """
-    An unclaimed box is open for anyone to set up.
-    A claimed box may only be edited by its holder (or a superuser).
-    """
+    """Unclaimed boxes are open to set up; claimed ones belong to their holder."""
     if current_user.is_superuser:
         return
+    if box.stage == BoxStage.COMPLETED:
+        raise HTTPException(
+            status_code=403, detail="This box is completed and can no longer be changed"
+        )
     if box.assignee_id is None:
         return
     if box.assignee_id != current_user.id:
         raise HTTPException(
-            status_code=403,
-            detail="This box is claimed by another user",
+            status_code=403, detail="This box is claimed by another user"
         )
 
 
 def _require_completion_access(box: Box, current_user: User) -> None:
-    """
-    Completing work requires holding the box.
-    """
+    """Recording work against a stage requires holding the box."""
     if current_user.is_superuser:
         return
+    if box.stage == BoxStage.COMPLETED:
+        raise HTTPException(
+            status_code=403, detail="This box is completed and can no longer be changed"
+        )
     if box.assignee_id is None:
         raise HTTPException(
-            status_code=403,
-            detail="Claim this box before completing its docs",
+            status_code=403, detail="Claim this box before completing its docs"
         )
     if box.assignee_id != current_user.id:
         raise HTTPException(
-            status_code=403,
-            detail="This box is claimed by another user",
+            status_code=403, detail="This box is claimed by another user"
         )
 
 
-def _release_box_if_finished(session: SessionDep, box: Box) -> None:
+def _set_stage_record(
+    doc: Doc, stage: BoxStage, user: User | None
+) -> None:
+    fields = STAGE_FIELDS.get(stage)
+    if fields is None:
+        return
+    at_field, by_field = fields
+    if user is None:
+        setattr(doc, at_field, None)
+        setattr(doc, by_field, None)
+    else:
+        setattr(doc, at_field, datetime.now(UTC))
+        setattr(doc, by_field, user.id)
+
+
+def _advance_box_if_finished(session: SessionDep, box: Box) -> None:
     """
-    Finishing the last outstanding doc releases the box back to the pool.
+    Finishing the last outstanding doc moves the box to the next stage
+    and releases it back to the pool.
     """
     session.refresh(box)
-    if box.assignee_id is not None and is_box_completed(box):
-        box.assignee_id = None
-        session.add(box)
-        session.commit()
+    if box.stage == BoxStage.COMPLETED:
+        return
+    if not is_stage_finished(box):
+        return
+    upcoming = next_stage(box.stage)
+    if upcoming is None:
+        return
+    box.stage = upcoming
+    box.assignee_id = None
+    session.add(box)
+    session.commit()
 
 
 @router.get("/boxes/{box_id}/docs/", response_model=DocsPublic)
@@ -99,9 +132,9 @@ def read_docs(session: SessionDep, current_user: CurrentUser, box_id: uuid.UUID)
     """
     Retrieve docs for a box. Visible to any authenticated user.
     """
-    _get_box(session, box_id)
+    box = _get_box(session, box_id)
     docs = session.exec(select(Doc).where(Doc.box_id == box_id)).all()
-    return DocsPublic(data=[_to_public(d) for d in docs], count=len(docs))
+    return DocsPublic(data=[_to_public(d, box) for d in docs], count=len(docs))
 
 
 @router.post("/boxes/{box_id}/docs/", response_model=DocPublic)
@@ -118,18 +151,11 @@ def create_doc(
     box = _get_box(session, box_id)
     _require_edit_access(box, current_user)
 
-    data = doc_in.model_dump()
-    if data.get("completed"):
-        _require_completion_access(box, current_user)
-        data["completed_at"] = datetime.now(UTC)
-        data["completed_by_id"] = current_user.id
-
-    doc = Doc.model_validate(data, update={"box_id": box_id})
+    doc = Doc.model_validate(doc_in, update={"box_id": box_id})
     session.add(doc)
     session.commit()
     session.refresh(doc)
-    _release_box_if_finished(session, box)
-    return _to_public(doc)
+    return _to_public(doc, box)
 
 
 @router.get("/docs/{id}", response_model=DocPublic)
@@ -137,7 +163,8 @@ def read_doc(session: SessionDep, current_user: CurrentUser, id: uuid.UUID) -> A
     """
     Get doc by ID.
     """
-    return _to_public(_get_doc(session, id))
+    doc = _get_doc(session, id)
+    return _to_public(doc, _get_box(session, doc.box_id))
 
 
 @router.put("/docs/{id}", response_model=DocPublic)
@@ -151,30 +178,27 @@ def update_doc(
     """
     Update a doc.
 
-    Marking a doc completed records who did it and when, and releases the
-    box if this was the last outstanding doc.
+    `completed` applies to the stage the box is currently in: it records
+    who did the work and when, and advances the box once every doc is done.
     """
     doc = _get_doc(session, id)
     box = _get_box(session, doc.box_id)
     _require_edit_access(box, current_user)
 
     update_dict = doc_in.model_dump(exclude_unset=True)
+    completed = update_dict.pop("completed", None)
 
-    if "completed" in update_dict and update_dict["completed"] != doc.completed:
+    if completed is not None and completed != doc_done_in_stage(doc, box.stage):
         _require_completion_access(box, current_user)
-        if update_dict["completed"]:
-            update_dict["completed_at"] = datetime.now(UTC)
-            update_dict["completed_by_id"] = current_user.id
-        else:
-            update_dict["completed_at"] = None
-            update_dict["completed_by_id"] = None
+        _set_stage_record(doc, box.stage, current_user if completed else None)
 
     doc.sqlmodel_update(update_dict)
     session.add(doc)
     session.commit()
     session.refresh(doc)
-    _release_box_if_finished(session, box)
-    return _to_public(doc)
+    _advance_box_if_finished(session, box)
+    session.refresh(box)
+    return _to_public(doc, box)
 
 
 @router.delete("/docs/{id}")
