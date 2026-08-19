@@ -5,11 +5,13 @@ import { Package } from "lucide-react"
 import { BoxesService, type BoxPublic } from "@/client"
 import AddBox from "@/components/Boxes/AddBox"
 import { columns } from "@/components/Boxes/columns"
+import MyBoxBanner from "@/components/Boxes/MyBoxBanner"
 import { STAGES } from "@/components/Boxes/stages"
 import { DataTable } from "@/components/Common/DataTable"
 import PendingBoxes from "@/components/Pending/PendingBoxes"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import useAuth from "@/hooks/useAuth"
 
 export const Route = createFileRoute("/_layout/boxes/")({
   component: Boxes,
@@ -60,6 +62,7 @@ function StagePanel({
 }
 
 function Boxes() {
+  const { user: currentUser } = useAuth()
   const results = useQueries({
     queries: STAGES.map((stage) => ({
       queryKey: ["boxes", stage.value],
@@ -67,6 +70,23 @@ function Boxes() {
         BoxesService.readBoxes({ stage: stage.value, skip: 0, limit: 100 }),
     })),
   })
+
+  // A user holds at most one box; find it across every stage.
+  const myBox = results
+    .flatMap((result) => result.data?.data ?? [])
+    .find((box) => box.assignee_id && box.assignee_id === currentUser?.id)
+
+  // Your box sorts to the top of whichever tab it lives in.
+  const sortForStage = (boxes: BoxPublic[]): BoxPublic[] => {
+    if (!myBox) {
+      return boxes
+    }
+    return [...boxes].sort((a, b) => {
+      if (a.id === myBox.id) return -1
+      if (b.id === myBox.id) return 1
+      return 0
+    })
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -79,6 +99,8 @@ function Boxes() {
         </div>
         <AddBox />
       </div>
+
+      {myBox ? <MyBoxBanner box={myBox} /> : null}
 
       <Tabs defaultValue={STAGES[0].value}>
         <TabsList>
@@ -101,7 +123,7 @@ function Boxes() {
           <TabsContent key={stage.value} value={stage.value} className="mt-4">
             <StagePanel
               stage={stage.value}
-              boxes={results[index].data?.data ?? []}
+              boxes={sortForStage(results[index].data?.data ?? [])}
               isLoading={results[index].isLoading}
             />
           </TabsContent>

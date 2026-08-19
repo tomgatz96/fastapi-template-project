@@ -3,10 +3,30 @@ import type { ColumnDef } from "@tanstack/react-table"
 
 import type { BoxPublic } from "@/client"
 import { Badge } from "@/components/ui/badge"
+import useAuth from "@/hooks/useAuth"
 import { cn } from "@/lib/utils"
 import { BoxActionsMenu } from "./BoxActionsMenu"
 import ClaimBox from "./ClaimBox"
 import { stageMeta } from "./stages"
+
+function AssigneeCell({ box }: { box: BoxPublic }) {
+  const { user: currentUser } = useAuth()
+
+  if (box.assignee_id && box.assignee_id === currentUser?.id) {
+    return <Badge variant="default">You</Badge>
+  }
+
+  return (
+    <span
+      className={cn(
+        "text-sm",
+        box.assignee_name ? "" : "text-muted-foreground italic",
+      )}
+    >
+      {box.assignee_name ?? "Unclaimed"}
+    </span>
+  )
+}
 
 export const columns: ColumnDef<BoxPublic>[] = [
   {
@@ -74,16 +94,7 @@ export const columns: ColumnDef<BoxPublic>[] = [
   {
     id: "assignee",
     header: "Working on it",
-    cell: ({ row }) => {
-      const name = row.original.assignee_name
-      return (
-        <span
-          className={cn("text-sm", name ? "" : "text-muted-foreground italic")}
-        >
-          {name ?? "Unclaimed"}
-        </span>
-      )
-    },
+    cell: ({ row }) => <AssigneeCell box={row.original} />,
   },
   {
     id: "claim",
