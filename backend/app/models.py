@@ -4,7 +4,7 @@ from datetime import UTC, datetime
 from pydantic import EmailStr
 from enum import Enum
 
-from sqlalchemy import DateTime, String
+from sqlalchemy import DateTime, Index, String, func
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -128,6 +128,10 @@ class Box(BoxBase, table=True):
     docs: list["Doc"] = Relationship(back_populates="box", cascade_delete=True)
 
 
+# Names are unique regardless of capitalisation.
+Index("ix_box_name_lower", func.lower(Box.name), unique=True)
+
+
 class BoxPublic(BoxBase):
     id: uuid.UUID
     owner_id: uuid.UUID | None = None
@@ -204,6 +208,9 @@ class Doc(DocBase, table=True):
     checked_by: User | None = Relationship(
         sa_relationship_kwargs={"foreign_keys": "Doc.checked_by_id"}
     )
+
+
+Index("ix_doc_name_lower", func.lower(Doc.name), unique=True)
 
 
 class DocPublic(DocBase):

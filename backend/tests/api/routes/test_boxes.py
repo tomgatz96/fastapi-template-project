@@ -7,6 +7,7 @@ from sqlmodel import Session, select
 from app.core.config import settings
 from app.models import Box
 from tests.utils.box import create_random_box
+from tests.utils.utils import random_lower_string
 
 
 @pytest.fixture(autouse=True)
@@ -34,7 +35,7 @@ def _unclaim(client: TestClient, headers: dict[str, str], box_id: str):
 def _add_doc(
     client: TestClient, headers: dict[str, str], box_id: str, **kwargs
 ) -> dict:
-    payload = {"name": "Doc", "description": "d", "pages": 1}
+    payload = {"name": random_lower_string(), "description": "d", "pages": 1}
     payload.update(kwargs)
     r = client.post(
         f"{settings.API_V1_STR}/boxes/{box_id}/docs/", headers=headers, json=payload
@@ -49,7 +50,7 @@ def _add_doc(
 def test_create_box(
     client: TestClient, superuser_token_headers: dict[str, str]
 ) -> None:
-    data = {"name": "Foo", "description": "Fighters"}
+    data = {"name": random_lower_string(), "description": "Fighters"}
     response = client.post(
         f"{settings.API_V1_STR}/boxes/", headers=superuser_token_headers, json=data
     )
@@ -129,7 +130,7 @@ def test_update_box(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
     box = create_random_box(db)
-    data = {"name": "Updated name", "description": "Updated description"}
+    data = {"name": random_lower_string(), "description": "Updated description"}
     response = client.put(
         f"{settings.API_V1_STR}/boxes/{box.id}",
         headers=superuser_token_headers,
@@ -145,7 +146,7 @@ def test_update_box_not_found(
     response = client.put(
         f"{settings.API_V1_STR}/boxes/{uuid.uuid4()}",
         headers=superuser_token_headers,
-        json={"name": "x"},
+        json={"name": random_lower_string()},
     )
     assert response.status_code == 404
 
@@ -157,7 +158,7 @@ def test_update_box_not_enough_permissions(
     response = client.put(
         f"{settings.API_V1_STR}/boxes/{box.id}",
         headers=normal_user_token_headers,
-        json={"name": "x"},
+        json={"name": random_lower_string()},
     )
     assert response.status_code == 403
     assert response.json()["detail"] == "Not enough permissions"
@@ -199,7 +200,7 @@ def test_delete_own_box_requires_superuser(
     created = client.post(
         f"{settings.API_V1_STR}/boxes/",
         headers=normal_user_token_headers,
-        json={"name": "Mine", "description": "owned by the normal user"},
+        json={"name": random_lower_string(), "description": "owned by the normal user"},
     )
     assert created.status_code == 200
     response = client.delete(
@@ -405,7 +406,8 @@ def test_docs_survive_owner_deletion(
     """The docs inside an orphaned box survive too."""
     box = create_random_box(db)
     owner_id = box.owner_id
-    _add_doc(client, superuser_token_headers, str(box.id), name="Keep me", pages=7)
+    doc_name = f"Keep me {random_lower_string()}"
+    _add_doc(client, superuser_token_headers, str(box.id), name=doc_name, pages=7)
 
     assert (
         client.delete(
@@ -420,4 +422,4 @@ def test_docs_survive_owner_deletion(
     assert docs.status_code == 200
     content = docs.json()
     assert content["count"] == 1
-    assert content["data"][0]["name"] == "Keep me"
+    assert content["data"][0]["name"] == doc_name

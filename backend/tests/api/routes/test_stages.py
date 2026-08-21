@@ -9,6 +9,7 @@ from sqlmodel import Session, select
 from app.core.config import settings
 from app.models import Box
 from tests.utils.box import create_random_box
+from tests.utils.utils import random_lower_string
 
 
 @pytest.fixture(autouse=True)
@@ -33,11 +34,15 @@ def _reject(client: TestClient, headers: dict[str, str], box_id: str):
     return client.post(f"{settings.API_V1_STR}/boxes/{box_id}/reject", headers=headers)
 
 
-def _add_doc(client: TestClient, headers: dict[str, str], box_id: str, name="Doc"):
+def _add_doc(client: TestClient, headers: dict[str, str], box_id: str, name=None):
     r = client.post(
         f"{settings.API_V1_STR}/boxes/{box_id}/docs/",
         headers=headers,
-        json={"name": name, "description": "d", "pages": 5},
+        json={
+            "name": name or random_lower_string(),
+            "description": "d",
+            "pages": 5,
+        },
     )
     assert r.status_code == 200
     return r.json()
@@ -79,7 +84,7 @@ def test_new_box_starts_in_preparation(
     response = client.post(
         f"{settings.API_V1_STR}/boxes/",
         headers=superuser_token_headers,
-        json={"name": "Fresh", "description": "new"},
+        json={"name": random_lower_string(), "description": "new"},
     )
     assert response.status_code == 200
     assert response.json()["stage"] == "preparation"
@@ -90,8 +95,8 @@ def test_box_advances_through_every_stage(
     client: TestClient, normal_user_token_headers: dict[str, str], db: Session
 ) -> None:
     box = create_random_box(db)
-    _add_doc(client, normal_user_token_headers, str(box.id), name="A")
-    _add_doc(client, normal_user_token_headers, str(box.id), name="B")
+    _add_doc(client, normal_user_token_headers, str(box.id), name=f"A-{random_lower_string()}")
+    _add_doc(client, normal_user_token_headers, str(box.id), name=f"B-{random_lower_string()}")
 
     _finish_stage(client, normal_user_token_headers, str(box.id))
     assert _get_box(client, normal_user_token_headers, str(box.id))["stage"] == "scan"
@@ -113,8 +118,8 @@ def test_box_stays_in_stage_until_every_doc_is_done(
     client: TestClient, normal_user_token_headers: dict[str, str], db: Session
 ) -> None:
     box = create_random_box(db)
-    doc_a = _add_doc(client, normal_user_token_headers, str(box.id), name="A")
-    _add_doc(client, normal_user_token_headers, str(box.id), name="B")
+    doc_a = _add_doc(client, normal_user_token_headers, str(box.id), name=f"A-{random_lower_string()}")
+    _add_doc(client, normal_user_token_headers, str(box.id), name=f"B-{random_lower_string()}")
     assert _claim(client, normal_user_token_headers, str(box.id)).status_code == 200
 
     _complete(client, normal_user_token_headers, doc_a["id"])
@@ -171,8 +176,8 @@ def test_uncompleting_a_doc_clears_its_stage_record(
     client: TestClient, normal_user_token_headers: dict[str, str], db: Session
 ) -> None:
     box = create_random_box(db)
-    doc_a = _add_doc(client, normal_user_token_headers, str(box.id), name="A")
-    _add_doc(client, normal_user_token_headers, str(box.id), name="B")
+    doc_a = _add_doc(client, normal_user_token_headers, str(box.id), name=f"A-{random_lower_string()}")
+    _add_doc(client, normal_user_token_headers, str(box.id), name=f"B-{random_lower_string()}")
     assert _claim(client, normal_user_token_headers, str(box.id)).status_code == 200
 
     _complete(client, normal_user_token_headers, doc_a["id"])
@@ -335,6 +340,6 @@ def test_completed_box_docs_cannot_be_edited(
     response = client.put(
         f"{settings.API_V1_STR}/docs/{doc['id']}",
         headers=normal_user_token_headers,
-        json={"name": "Changed"},
+        json={"name": random_lower_string()},
     )
     assert response.status_code == 403

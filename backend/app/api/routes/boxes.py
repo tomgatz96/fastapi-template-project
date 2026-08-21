@@ -99,6 +99,19 @@ def _to_public(box: Box) -> BoxPublic:
     )
 
 
+def _ensure_unique_name(
+    session: SessionDep, name: str, exclude_id: uuid.UUID | None = None
+) -> None:
+    """Box names are unique across the app, ignoring capitalisation."""
+    statement = select(Box).where(func.lower(Box.name) == name.strip().lower())
+    if exclude_id is not None:
+        statement = statement.where(Box.id != exclude_id)
+    if session.exec(statement).first() is not None:
+        raise HTTPException(
+            status_code=409, detail="A box with this name already exists"
+        )
+
+
 def _get_box(session: SessionDep, id: uuid.UUID) -> Box:
     box = session.get(Box, id)
     if not box:
@@ -143,7 +156,9 @@ def create_box(
     """
     Create new box. New boxes enter the pipeline at preparation.
     """
-    box = Box.model_validate(box_in, update={"owner_id": current_user.id})
+    name = box_in.name.strip()
+    _ensure_unique_name(session, name)
+    box = Box.model_validate(box_in, update={"owner_id": current_user.id, "name": name})
     session.add(box)
     session.commit()
     session.refresh(box)
@@ -164,7 +179,11 @@ def update_box(
     box = _get_box(session, id)
     if not current_user.is_superuser and (box.owner_id != current_user.id):
         raise HTTPException(status_code=403, detail="Not enough permissions")
-    box.sqlmodel_update(box_in.model_dump(exclude_unset=True))
+    update_dict = box_in.model_dump(exclude_unset=True)
+    if "name" in update_dict and update_dict["name"] is not None:
+        update_dict["name"] = update_dict["name"].strip()
+        _ensure_unique_name(session, update_dict["name"], exclude_id=box.id)
+    box.sqlmodel_update(update_dict)
     session.add(box)
     session.commit()
     session.refresh(box)

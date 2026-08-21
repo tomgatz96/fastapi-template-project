@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
-from sqlmodel import select
+from sqlmodel import func, select
 
 from app.api.deps import CurrentUser, SessionDep
 from app.api.routes.boxes import (
@@ -50,6 +50,19 @@ def _get_box(session: SessionDep, box_id: uuid.UUID) -> Box:
     if not box:
         raise HTTPException(status_code=404, detail="Box not found")
     return box
+
+
+def _ensure_unique_name(
+    session: SessionDep, name: str, exclude_id: uuid.UUID | None = None
+) -> None:
+    """Doc names are unique across the app, ignoring capitalisation."""
+    statement = select(Doc).where(func.lower(Doc.name) == name.strip().lower())
+    if exclude_id is not None:
+        statement = statement.where(Doc.id != exclude_id)
+    if session.exec(statement).first() is not None:
+        raise HTTPException(
+            status_code=409, detail="A doc with this name already exists"
+        )
 
 
 def _get_doc(session: SessionDep, id: uuid.UUID) -> Doc:
@@ -151,7 +164,9 @@ def create_doc(
     box = _get_box(session, box_id)
     _require_edit_access(box, current_user)
 
-    doc = Doc.model_validate(doc_in, update={"box_id": box_id})
+    name = doc_in.name.strip()
+    _ensure_unique_name(session, name)
+    doc = Doc.model_validate(doc_in, update={"box_id": box_id, "name": name})
     session.add(doc)
     session.commit()
     session.refresh(doc)
@@ -187,6 +202,10 @@ def update_doc(
 
     update_dict = doc_in.model_dump(exclude_unset=True)
     completed = update_dict.pop("completed", None)
+
+    if "name" in update_dict and update_dict["name"] is not None:
+        update_dict["name"] = update_dict["name"].strip()
+        _ensure_unique_name(session, update_dict["name"], exclude_id=doc.id)
 
     if completed is not None and completed != doc_done_in_stage(doc, box.stage):
         _require_completion_access(box, current_user)

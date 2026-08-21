@@ -7,6 +7,7 @@ from sqlmodel import Session, select
 from app.core.config import settings
 from app.models import Box
 from tests.utils.box import create_random_box
+from tests.utils.utils import random_lower_string
 from tests.utils.doc import create_random_doc
 
 
@@ -40,7 +41,7 @@ def test_create_doc(
     client: TestClient, superuser_token_headers: dict[str, str], db: Session
 ) -> None:
     box = create_random_box(db)
-    data = {"name": "Foo", "description": "Fighters", "pages": 25}
+    data = {"name": random_lower_string(), "description": "Fighters", "pages": 25}
     response = client.post(
         f"{settings.API_V1_STR}/boxes/{box.id}/docs/",
         headers=superuser_token_headers,
@@ -66,7 +67,7 @@ def test_create_doc_in_unclaimed_box_by_any_user(
     response = client.post(
         f"{settings.API_V1_STR}/boxes/{box.id}/docs/",
         headers=normal_user_token_headers,
-        json={"name": "Foo", "description": "d", "pages": 3},
+        json={"name": random_lower_string(), "description": "d", "pages": 3},
     )
     assert response.status_code == 200
 
@@ -82,7 +83,7 @@ def test_create_doc_in_box_claimed_by_someone_else(
     response = client.post(
         f"{settings.API_V1_STR}/boxes/{box.id}/docs/",
         headers=normal_user_token_headers,
-        json={"name": "Foo", "description": "d", "pages": 3},
+        json={"name": random_lower_string(), "description": "d", "pages": 3},
     )
     assert response.status_code == 403
     assert response.json()["detail"] == "This box is claimed by another user"
@@ -146,14 +147,15 @@ def test_update_doc_fields_in_unclaimed_box(
     client: TestClient, normal_user_token_headers: dict[str, str], db: Session
 ) -> None:
     doc = create_random_doc(db)
+    new_name = random_lower_string()
     response = client.put(
         f"{settings.API_V1_STR}/docs/{doc.id}",
         headers=normal_user_token_headers,
-        json={"name": "Updated", "pages": 99},
+        json={"name": new_name, "pages": 99},
     )
     assert response.status_code == 200
     content = response.json()
-    assert content["name"] == "Updated"
+    assert content["name"] == new_name
     assert content["pages"] == 99
 
 
@@ -163,7 +165,7 @@ def test_update_doc_not_found(
     response = client.put(
         f"{settings.API_V1_STR}/docs/{uuid.uuid4()}",
         headers=superuser_token_headers,
-        json={"name": "x"},
+        json={"name": random_lower_string()},
     )
     assert response.status_code == 404
 
@@ -179,7 +181,7 @@ def test_update_doc_in_box_claimed_by_someone_else(
     response = client.put(
         f"{settings.API_V1_STR}/docs/{doc.id}",
         headers=normal_user_token_headers,
-        json={"name": "Updated"},
+        json={"name": random_lower_string()},
     )
     assert response.status_code == 403
 
@@ -268,14 +270,15 @@ def test_editing_other_fields_keeps_completion_intact(
     assert _claim(client, normal_user_token_headers, str(box.id)).status_code == 200
     completed = _complete(client, normal_user_token_headers, str(doc_a.id)).json()
 
+    new_name = random_lower_string()
     response = client.put(
         f"{settings.API_V1_STR}/docs/{doc_a.id}",
         headers=normal_user_token_headers,
-        json={"name": "Renamed"},
+        json={"name": new_name},
     )
     assert response.status_code == 200
     content = response.json()
-    assert content["name"] == "Renamed"
+    assert content["name"] == new_name
     assert content["prepared_at"] == completed["prepared_at"]
     assert content["prepared_by_name"] == completed["prepared_by_name"]
 

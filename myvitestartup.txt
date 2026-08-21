@@ -4,3 +4,8 @@
 # remake initial data:     docker compose exec backend python app/initial_data.py
 
 # clear browser token:   localStorage.removeItem("access_token"); location.reload()
+
+
+# github commit:  git add .
+git commit -m "Pin claimed box to top with a My box banner"
+git push
