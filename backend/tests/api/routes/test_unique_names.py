@@ -188,3 +188,65 @@ def test_renaming_a_doc_to_its_own_name_is_allowed(
     )
     assert response.status_code == 200
     assert response.json()["pages"] == 42
+
+
+# --- Searching by name ---
+
+
+def test_search_finds_boxes_by_partial_name(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    unique = random_lower_string()
+    name = f"invoice-{unique}"
+    assert _create_box(client, superuser_token_headers, name).status_code == 200
+
+    response = client.get(
+        f"{settings.API_V1_STR}/boxes/?q={unique[:8]}", headers=superuser_token_headers
+    )
+    assert response.status_code == 200
+    names = [b["name"] for b in response.json()["data"]]
+    assert name in names
+
+
+def test_search_ignores_capitalisation(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    name = random_lower_string()
+    assert _create_box(client, superuser_token_headers, name).status_code == 200
+
+    response = client.get(
+        f"{settings.API_V1_STR}/boxes/?q={name.upper()}", headers=superuser_token_headers
+    )
+    assert response.status_code == 200
+    assert name in [b["name"] for b in response.json()["data"]]
+
+
+def test_search_with_no_matches_returns_nothing(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    response = client.get(
+        f"{settings.API_V1_STR}/boxes/?q=zzz-nothing-matches-this-zzz",
+        headers=superuser_token_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["count"] == 0
+    assert response.json()["data"] == []
+
+
+def test_search_can_be_combined_with_stage(
+    client: TestClient, superuser_token_headers: dict[str, str]
+) -> None:
+    name = random_lower_string()
+    assert _create_box(client, superuser_token_headers, name).status_code == 200
+
+    in_prep = client.get(
+        f"{settings.API_V1_STR}/boxes/?q={name}&stage=preparation",
+        headers=superuser_token_headers,
+    ).json()
+    in_completed = client.get(
+        f"{settings.API_V1_STR}/boxes/?q={name}&stage=completed",
+        headers=superuser_token_headers,
+    ).json()
+
+    assert in_prep["count"] == 1
+    assert in_completed["count"] == 0

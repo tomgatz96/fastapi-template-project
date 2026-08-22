@@ -157,6 +157,7 @@ export type ValidationError = {
 
 export type BoxesReadBoxesData = {
     limit?: number;
+    q?: (string | null);
     skip?: number;
     stage?: (BoxStage | null);
 };

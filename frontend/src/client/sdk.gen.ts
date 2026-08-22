@@ -8,9 +8,13 @@ import type { BoxesReadBoxesData, BoxesReadBoxesResponse, BoxesCreateBoxData, Bo
 export class BoxesService {
     /**
      * Read Boxes
-     * Retrieve boxes, optionally filtered to a single pipeline stage.
+     * Retrieve boxes.
+     *
+     * Optionally filtered to a single pipeline stage, and/or narrowed to
+     * boxes whose name contains `q` (ignoring capitalisation).
      * @param data The data for the request.
      * @param data.stage
+     * @param data.q
      * @param data.skip
      * @param data.limit
      * @returns BoxesPublic Successful Response
@@ -22,6 +26,7 @@ export class BoxesService {
             url: '/api/v1/boxes/',
             query: {
                 stage: data.stage,
+                q: data.q,
                 skip: data.skip,
                 limit: data.limit
             },

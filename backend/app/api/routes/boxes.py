@@ -124,20 +124,30 @@ def read_boxes(
     session: SessionDep,
     current_user: CurrentUser,
     stage: BoxStage | None = None,
+    q: str | None = None,
     skip: int = 0,
     limit: int = 100,
 ) -> Any:
     """
-    Retrieve boxes, optionally filtered to a single pipeline stage.
+    Retrieve boxes.
+
+    Optionally filtered to a single pipeline stage, and/or narrowed to
+    boxes whose name contains `q` (ignoring capitalisation).
     """
     count_statement = select(func.count()).select_from(Box)
     statement = select(Box)
+
     if stage is not None:
         count_statement = count_statement.where(Box.stage == stage)
         statement = statement.where(Box.stage == stage)
 
+    if q is not None and q.strip():
+        pattern = f"%{q.strip().lower()}%"
+        count_statement = count_statement.where(func.lower(Box.name).like(pattern))
+        statement = statement.where(func.lower(Box.name).like(pattern))
+
     count = session.exec(count_statement).one()
-    boxes = session.exec(statement.offset(skip).limit(limit)).all()
+    boxes = session.exec(statement.order_by(Box.name).offset(skip).limit(limit)).all()
     return BoxesPublic(data=[_to_public(b) for b in boxes], count=count)
 
 
