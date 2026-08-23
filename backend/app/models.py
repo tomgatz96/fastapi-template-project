@@ -68,6 +68,13 @@ class User(UserBase, table=True):
     )
 
 
+def display_name(user: User | None) -> str | None:
+    """How a user is shown to others: their name, falling back to their email."""
+    if user is None:
+        return None
+    return user.full_name or user.email
+
+
 class UserPublic(UserBase):
     id: uuid.UUID
     created_at: datetime | None = None

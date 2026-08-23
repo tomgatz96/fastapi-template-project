@@ -12,6 +12,8 @@ from app.core import security
 from app.core.config import settings
 from app.core.db import engine
 from app.models import TokenPayload, User
+from app.repositories.box_repository import BoxRepository
+from app.services.box_service import BoxService
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/login/access-token"
@@ -55,3 +57,15 @@ def get_current_active_superuser(current_user: CurrentUser) -> User:
             status_code=403, detail="The user doesn't have enough privileges"
         )
     return current_user
+
+
+# --- Services ---
+# Each service is built on a repository bound to the request's session, so a
+# controller only has to ask for the service it needs.
+
+
+def get_box_service(session: SessionDep) -> BoxService:
+    return BoxService(BoxRepository(session))
+
+
+BoxServiceDep = Annotated[BoxService, Depends(get_box_service)]

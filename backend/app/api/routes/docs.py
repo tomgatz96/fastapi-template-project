@@ -6,13 +6,6 @@ from fastapi import APIRouter, HTTPException
 from sqlmodel import func, select
 
 from app.api.deps import CurrentUser, SessionDep
-from app.api.routes.boxes import (
-    STAGE_FIELDS,
-    display_name,
-    doc_done_in_stage,
-    is_stage_finished,
-    next_stage,
-)
 from app.models import (
     Box,
     BoxStage,
@@ -23,6 +16,13 @@ from app.models import (
     DocUpdate,
     Message,
     User,
+    display_name,
+)
+from app.services.pipeline import (
+    STAGE_FIELDS,
+    doc_done_in_stage,
+    is_stage_finished,
+    next_stage,
 )
 
 router = APIRouter(tags=["docs"])
