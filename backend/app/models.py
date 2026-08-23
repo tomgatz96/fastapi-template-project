@@ -246,3 +246,40 @@ class TokenPayload(SQLModel):
 class NewPassword(SQLModel):
     token: str
     new_password: str = Field(min_length=8, max_length=128)
+
+
+# --- Stats ---
+
+
+class StageStats(SQLModel):
+    docs: int = 0
+    pages: int = 0
+
+
+class PeriodStats(SQLModel):
+    preparation: StageStats = StageStats()
+    scan: StageStats = StageStats()
+    quality_control: StageStats = StageStats()
+    total: StageStats = StageStats()
+
+
+class StatsBuckets(SQLModel):
+    day: PeriodStats = PeriodStats()
+    week: PeriodStats = PeriodStats()
+    month: PeriodStats = PeriodStats()
+
+
+class UserStats(SQLModel):
+    user_id: uuid.UUID
+    user_name: str
+    stats: StatsBuckets
+
+
+class StatsPublic(SQLModel):
+    """Work recorded today, this week and this month."""
+
+    day_start: datetime
+    week_start: datetime
+    month_start: datetime
+    totals: StatsBuckets
+    users: list[UserStats]

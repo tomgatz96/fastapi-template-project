@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { BoxesReadBoxesData, BoxesReadBoxesResponse, BoxesCreateBoxData, BoxesCreateBoxResponse, BoxesReadBoxData, BoxesReadBoxResponse, BoxesUpdateBoxData, BoxesUpdateBoxResponse, BoxesDeleteBoxData, BoxesDeleteBoxResponse, BoxesClaimBoxData, BoxesClaimBoxResponse, BoxesUnclaimBoxData, BoxesUnclaimBoxResponse, BoxesRejectBoxData, BoxesRejectBoxResponse, DocsReadDocsData, DocsReadDocsResponse, DocsCreateDocData, DocsCreateDocResponse, DocsReadDocData, DocsReadDocResponse, DocsUpdateDocData, DocsUpdateDocResponse, DocsDeleteDocData, DocsDeleteDocResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PrivateCreateUserData, PrivateCreateUserResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
+import type { BoxesReadBoxesData, BoxesReadBoxesResponse, BoxesCreateBoxData, BoxesCreateBoxResponse, BoxesReadBoxData, BoxesReadBoxResponse, BoxesUpdateBoxData, BoxesUpdateBoxResponse, BoxesDeleteBoxData, BoxesDeleteBoxResponse, BoxesClaimBoxData, BoxesClaimBoxResponse, BoxesUnclaimBoxData, BoxesUnclaimBoxResponse, BoxesRejectBoxData, BoxesRejectBoxResponse, DocsReadDocsData, DocsReadDocsResponse, DocsCreateDocData, DocsCreateDocResponse, DocsReadDocData, DocsReadDocResponse, DocsUpdateDocData, DocsUpdateDocResponse, DocsDeleteDocData, DocsDeleteDocResponse, LoginLoginAccessTokenData, LoginLoginAccessTokenResponse, LoginTestTokenResponse, LoginRecoverPasswordData, LoginRecoverPasswordResponse, LoginResetPasswordData, LoginResetPasswordResponse, LoginRecoverPasswordHtmlContentData, LoginRecoverPasswordHtmlContentResponse, PrivateCreateUserData, PrivateCreateUserResponse, StatsReadStatsData, StatsReadStatsResponse, UsersReadUsersData, UsersReadUsersResponse, UsersCreateUserData, UsersCreateUserResponse, UsersReadUserMeResponse, UsersDeleteUserMeResponse, UsersUpdateUserMeData, UsersUpdateUserMeResponse, UsersUpdatePasswordMeData, UsersUpdatePasswordMeResponse, UsersRegisterUserData, UsersRegisterUserResponse, UsersReadUserByIdData, UsersReadUserByIdResponse, UsersUpdateUserData, UsersUpdateUserResponse, UsersDeleteUserData, UsersDeleteUserResponse, UtilsTestEmailData, UtilsTestEmailResponse, UtilsHealthCheckResponse } from './types.gen';
 
 export class BoxesService {
     /**
@@ -418,6 +418,30 @@ export class PrivateService {
             url: '/api/v1/private/users/',
             body: data.requestBody,
             mediaType: 'application/json',
+            errors: {
+                422: 'Validation Error'
+            }
+        });
+    }
+}
+
+export class StatsService {
+    /**
+     * Read Stats
+     * Docs and pages completed today, this week and this month, broken down
+     * by stage, both overall and per user.
+     * @param data The data for the request.
+     * @param data.tzOffsetMinutes Minutes behind UTC, as returned by JavaScript's getTimezoneOffset().
+     * @returns StatsPublic Successful Response
+     * @throws ApiError
+     */
+    public static readStats(data: StatsReadStatsData = {}): CancelablePromise<StatsReadStatsResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/api/v1/stats/',
+            query: {
+                tz_offset_minutes: data.tzOffsetMinutes
+            },
             errors: {
                 422: 'Validation Error'
             }

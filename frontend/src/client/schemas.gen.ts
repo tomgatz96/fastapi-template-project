@@ -502,6 +502,41 @@ export const NewPasswordSchema = {
     title: 'NewPassword'
 } as const;
 
+export const PeriodStatsSchema = {
+    properties: {
+        preparation: {
+            '$ref': '#/components/schemas/StageStats',
+            default: {
+                docs: 0,
+                pages: 0
+            }
+        },
+        scan: {
+            '$ref': '#/components/schemas/StageStats',
+            default: {
+                docs: 0,
+                pages: 0
+            }
+        },
+        quality_control: {
+            '$ref': '#/components/schemas/StageStats',
+            default: {
+                docs: 0,
+                pages: 0
+            }
+        },
+        total: {
+            '$ref': '#/components/schemas/StageStats',
+            default: {
+                docs: 0,
+                pages: 0
+            }
+        }
+    },
+    type: 'object',
+    title: 'PeriodStats'
+} as const;
+
 export const PrivateUserCreateSchema = {
     properties: {
         email: {
@@ -525,6 +560,127 @@ export const PrivateUserCreateSchema = {
     type: 'object',
     required: ['email', 'password', 'full_name'],
     title: 'PrivateUserCreate'
+} as const;
+
+export const StageStatsSchema = {
+    properties: {
+        docs: {
+            type: 'integer',
+            title: 'Docs',
+            default: 0
+        },
+        pages: {
+            type: 'integer',
+            title: 'Pages',
+            default: 0
+        }
+    },
+    type: 'object',
+    title: 'StageStats'
+} as const;
+
+export const StatsBucketsSchema = {
+    properties: {
+        day: {
+            '$ref': '#/components/schemas/PeriodStats',
+            default: {
+                preparation: {
+                    docs: 0,
+                    pages: 0
+                },
+                scan: {
+                    docs: 0,
+                    pages: 0
+                },
+                quality_control: {
+                    docs: 0,
+                    pages: 0
+                },
+                total: {
+                    docs: 0,
+                    pages: 0
+                }
+            }
+        },
+        week: {
+            '$ref': '#/components/schemas/PeriodStats',
+            default: {
+                preparation: {
+                    docs: 0,
+                    pages: 0
+                },
+                scan: {
+                    docs: 0,
+                    pages: 0
+                },
+                quality_control: {
+                    docs: 0,
+                    pages: 0
+                },
+                total: {
+                    docs: 0,
+                    pages: 0
+                }
+            }
+        },
+        month: {
+            '$ref': '#/components/schemas/PeriodStats',
+            default: {
+                preparation: {
+                    docs: 0,
+                    pages: 0
+                },
+                scan: {
+                    docs: 0,
+                    pages: 0
+                },
+                quality_control: {
+                    docs: 0,
+                    pages: 0
+                },
+                total: {
+                    docs: 0,
+                    pages: 0
+                }
+            }
+        }
+    },
+    type: 'object',
+    title: 'StatsBuckets'
+} as const;
+
+export const StatsPublicSchema = {
+    properties: {
+        day_start: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Day Start'
+        },
+        week_start: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Week Start'
+        },
+        month_start: {
+            type: 'string',
+            format: 'date-time',
+            title: 'Month Start'
+        },
+        totals: {
+            '$ref': '#/components/schemas/StatsBuckets'
+        },
+        users: {
+            items: {
+                '$ref': '#/components/schemas/UserStats'
+            },
+            type: 'array',
+            title: 'Users'
+        }
+    },
+    type: 'object',
+    required: ['day_start', 'week_start', 'month_start', 'totals', 'users'],
+    title: 'StatsPublic',
+    description: 'Work recorded today, this week and this month.'
 } as const;
 
 export const TokenSchema = {
@@ -689,6 +845,26 @@ export const UserRegisterSchema = {
     type: 'object',
     required: ['email', 'password'],
     title: 'UserRegister'
+} as const;
+
+export const UserStatsSchema = {
+    properties: {
+        user_id: {
+            type: 'string',
+            format: 'uuid',
+            title: 'User Id'
+        },
+        user_name: {
+            type: 'string',
+            title: 'User Name'
+        },
+        stats: {
+            '$ref': '#/components/schemas/StatsBuckets'
+        }
+    },
+    type: 'object',
+    required: ['user_id', 'user_name', 'stats'],
+    title: 'UserStats'
 } as const;
 
 export const UserUpdateSchema = {

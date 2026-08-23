@@ -15,6 +15,7 @@ import { Route as RecoverPasswordRouteImport } from './routes/recover-password'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
+import { Route as LayoutStatsRouteImport } from './routes/_layout/stats'
 import { Route as LayoutSettingsRouteImport } from './routes/_layout/settings'
 import { Route as LayoutHistoryRouteImport } from './routes/_layout/history'
 import { Route as LayoutAdminRouteImport } from './routes/_layout/admin'
@@ -48,6 +49,11 @@ const LayoutRoute = LayoutRouteImport.update({
 const LayoutIndexRoute = LayoutIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutStatsRoute = LayoutStatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutSettingsRoute = LayoutSettingsRouteImport.update({
@@ -85,6 +91,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof LayoutAdminRoute
   '/history': typeof LayoutHistoryRoute
   '/settings': typeof LayoutSettingsRoute
+  '/stats': typeof LayoutStatsRoute
   '/boxes/$boxId': typeof LayoutBoxesBoxIdRoute
   '/boxes/': typeof LayoutBoxesIndexRoute
 }
@@ -96,6 +103,7 @@ export interface FileRoutesByTo {
   '/admin': typeof LayoutAdminRoute
   '/history': typeof LayoutHistoryRoute
   '/settings': typeof LayoutSettingsRoute
+  '/stats': typeof LayoutStatsRoute
   '/': typeof LayoutIndexRoute
   '/boxes/$boxId': typeof LayoutBoxesBoxIdRoute
   '/boxes': typeof LayoutBoxesIndexRoute
@@ -110,6 +118,7 @@ export interface FileRoutesById {
   '/_layout/admin': typeof LayoutAdminRoute
   '/_layout/history': typeof LayoutHistoryRoute
   '/_layout/settings': typeof LayoutSettingsRoute
+  '/_layout/stats': typeof LayoutStatsRoute
   '/_layout/': typeof LayoutIndexRoute
   '/_layout/boxes/$boxId': typeof LayoutBoxesBoxIdRoute
   '/_layout/boxes/': typeof LayoutBoxesIndexRoute
@@ -125,6 +134,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/history'
     | '/settings'
+    | '/stats'
     | '/boxes/$boxId'
     | '/boxes/'
   fileRoutesByTo: FileRoutesByTo
@@ -136,6 +146,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/history'
     | '/settings'
+    | '/stats'
     | '/'
     | '/boxes/$boxId'
     | '/boxes'
@@ -149,6 +160,7 @@ export interface FileRouteTypes {
     | '/_layout/admin'
     | '/_layout/history'
     | '/_layout/settings'
+    | '/_layout/stats'
     | '/_layout/'
     | '/_layout/boxes/$boxId'
     | '/_layout/boxes/'
@@ -206,6 +218,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIndexRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/stats': {
+      id: '/_layout/stats'
+      path: '/stats'
+      fullPath: '/stats'
+      preLoaderRoute: typeof LayoutStatsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/settings': {
       id: '/_layout/settings'
       path: '/settings'
@@ -248,6 +267,7 @@ interface LayoutRouteChildren {
   LayoutAdminRoute: typeof LayoutAdminRoute
   LayoutHistoryRoute: typeof LayoutHistoryRoute
   LayoutSettingsRoute: typeof LayoutSettingsRoute
+  LayoutStatsRoute: typeof LayoutStatsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutBoxesBoxIdRoute: typeof LayoutBoxesBoxIdRoute
   LayoutBoxesIndexRoute: typeof LayoutBoxesIndexRoute
@@ -257,6 +277,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAdminRoute: LayoutAdminRoute,
   LayoutHistoryRoute: LayoutHistoryRoute,
   LayoutSettingsRoute: LayoutSettingsRoute,
+  LayoutStatsRoute: LayoutStatsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutBoxesBoxIdRoute: LayoutBoxesBoxIdRoute,
   LayoutBoxesIndexRoute: LayoutBoxesIndexRoute,

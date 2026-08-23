@@ -87,11 +87,40 @@ export type NewPassword = {
     new_password: string;
 };
 
+export type PeriodStats = {
+    preparation?: StageStats;
+    scan?: StageStats;
+    quality_control?: StageStats;
+    total?: StageStats;
+};
+
 export type PrivateUserCreate = {
     email: string;
     password: string;
     full_name: string;
     is_verified?: boolean;
+};
+
+export type StageStats = {
+    docs?: number;
+    pages?: number;
+};
+
+export type StatsBuckets = {
+    day?: PeriodStats;
+    week?: PeriodStats;
+    month?: PeriodStats;
+};
+
+/**
+ * Work recorded today, this week and this month.
+ */
+export type StatsPublic = {
+    day_start: string;
+    week_start: string;
+    month_start: string;
+    totals: StatsBuckets;
+    users: Array<UserStats>;
 };
 
 export type Token = {
@@ -130,6 +159,12 @@ export type UserRegister = {
 export type UsersPublic = {
     data: Array<UserPublic>;
     count: number;
+};
+
+export type UserStats = {
+    user_id: string;
+    user_name: string;
+    stats: StatsBuckets;
 };
 
 export type UserUpdate = {
@@ -270,6 +305,15 @@ export type PrivateCreateUserData = {
 };
 
 export type PrivateCreateUserResponse = (UserPublic);
+
+export type StatsReadStatsData = {
+    /**
+     * Minutes behind UTC, as returned by JavaScript's getTimezoneOffset().
+     */
+    tzOffsetMinutes?: number;
+};
+
+export type StatsReadStatsResponse = (StatsPublic);
 
 export type UsersReadUsersData = {
     limit?: number;
