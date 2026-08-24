@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
-from app.api.routes.stats import period_starts
+from app.services.stats_service import period_starts
 from app.core.config import settings
 from app.models import Box, Doc
 from tests.utils.box import create_random_box
