@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 from app.services.exceptions import (
     ConflictError,
     DomainError,
+    InvalidRequestError,
     NotFoundError,
     PermissionDeniedError,
 )
@@ -21,6 +22,7 @@ STATUS_BY_ERROR: dict[type[DomainError], int] = {
     NotFoundError: 404,
     PermissionDeniedError: 403,
     ConflictError: 409,
+    InvalidRequestError: 400,
 }
 
 DEFAULT_STATUS = 400

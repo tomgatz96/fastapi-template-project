@@ -27,3 +27,14 @@ class PermissionDeniedError(DomainError):
 
 class ConflictError(DomainError):
     """The action contradicts the current state of the data."""
+
+
+class InvalidRequestError(DomainError):
+    """
+    The request is well formed but cannot be carried out as asked.
+
+    Distinct from `ConflictError` only in the status code it maps to. It
+    exists because several endpoints answer 400 where 409 would arguably be
+    the better answer, and a refactor is the wrong moment to change what the
+    API returns.
+    """

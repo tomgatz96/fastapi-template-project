@@ -14,8 +14,13 @@ from app.core.db import engine
 from app.models import TokenPayload, User
 from app.repositories.box_repository import BoxRepository
 from app.repositories.doc_repository import DocRepository
+from app.repositories.stats_repository import StatsRepository
+from app.repositories.user_repository import UserRepository
+from app.services.auth_service import AuthService
 from app.services.box_service import BoxService
 from app.services.doc_service import DocService
+from app.services.stats_service import StatsService
+from app.services.user_service import UserService
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/login/access-token"
@@ -37,7 +42,7 @@ def get_current_user(session: SessionDep, token: TokenDep) -> User:
             token, settings.SECRET_KEY, algorithms=[security.ALGORITHM]
         )
         token_data = TokenPayload(**payload)
-    except (InvalidTokenError, ValidationError):
+    except InvalidTokenError, ValidationError:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Could not validate credentials",
@@ -78,3 +83,24 @@ def get_doc_service(session: SessionDep) -> DocService:
 
 
 DocServiceDep = Annotated[DocService, Depends(get_doc_service)]
+
+
+def get_stats_service(session: SessionDep) -> StatsService:
+    return StatsService(StatsRepository(session))
+
+
+StatsServiceDep = Annotated[StatsService, Depends(get_stats_service)]
+
+
+def get_user_service(session: SessionDep) -> UserService:
+    return UserService(UserRepository(session))
+
+
+UserServiceDep = Annotated[UserService, Depends(get_user_service)]
+
+
+def get_auth_service(session: SessionDep) -> AuthService:
+    return AuthService(UserRepository(session))
+
+
+AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
