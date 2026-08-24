@@ -1,9 +1,10 @@
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from app import crud
 from app.core.config import settings
 from app.models import User, UserCreate, UserUpdate
+from app.repositories.user_repository import UserRepository
+from app.services.user_service import apply_update, new_user
 from tests.utils.utils import random_email, random_lower_string
 
 
@@ -19,12 +20,15 @@ def user_authentication_headers(
     return headers
 
 
+def create_user(db: Session, user_in: UserCreate) -> User:
+    """Store a user with its password hashed, bypassing the service rules."""
+    return UserRepository(db).save(new_user(user_in))
+
+
 def create_random_user(db: Session) -> User:
     email = random_email()
     password = random_lower_string()
-    user_in = UserCreate(email=email, password=password)
-    user = crud.create_user(session=db, user_create=user_in)
-    return user
+    return create_user(db, UserCreate(email=email, password=password))
 
 
 def authentication_token_from_email(
@@ -36,14 +40,13 @@ def authentication_token_from_email(
     If the user doesn't exist it is created first.
     """
     password = random_lower_string()
-    user = crud.get_user_by_email(session=db, email=email)
+    users = UserRepository(db)
+    user = users.find_by_email(email)
     if not user:
-        user_in_create = UserCreate(email=email, password=password)
-        user = crud.create_user(session=db, user_create=user_in_create)
+        create_user(db, UserCreate(email=email, password=password))
     else:
-        user_in_update = UserUpdate(password=password)
         if not user.id:
             raise Exception("User id not set")
-        user = crud.update_user(session=db, db_user=user, user_in=user_in_update)
+        users.save(apply_update(user, UserUpdate(password=password)))
 
     return user_authentication_headers(client=client, email=email, password=password)
