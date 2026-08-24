@@ -70,6 +70,16 @@ class BoxRepository:
         self.session.refresh(box)
         return box
 
+    def refresh(self, box: Box) -> Box:
+        """
+        Reload the box from the database.
+
+        Needed after a doc inside it has been written, so that the box's
+        view of its own docs reflects the change before it is inspected.
+        """
+        self.session.refresh(box)
+        return box
+
     def delete(self, box: Box) -> None:
         """Remove the box; its docs cascade."""
         self.session.delete(box)

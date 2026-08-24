@@ -6,7 +6,9 @@ here answers questions about stages and about the work recorded against a
 document, and is shared by the box and doc services.
 """
 
-from app.models import Box, BoxStage, Doc
+from datetime import UTC, datetime
+
+from app.models import Box, BoxStage, Doc, User
 
 # The pipeline, in order. A box moves forward one step at a time.
 STAGE_ORDER: list[BoxStage] = [
@@ -57,6 +59,25 @@ def clear_stage_records(doc: Doc, stage: BoxStage) -> None:
     setattr(doc, fields[1], None)
 
 
+def set_stage_record(doc: Doc, stage: BoxStage, user: User | None) -> None:
+    """
+    Record, or withdraw, the work done on a doc for `stage`.
+
+    Passing a user stamps the doc with them and the current time; passing
+    None undoes that, for when someone unticks a doc by mistake.
+    """
+    fields = STAGE_FIELDS.get(stage)
+    if fields is None:
+        return
+    at_field, by_field = fields
+    if user is None:
+        setattr(doc, at_field, None)
+        setattr(doc, by_field, None)
+    else:
+        setattr(doc, at_field, datetime.now(UTC))
+        setattr(doc, by_field, user.id)
+
+
 def stage_done_count(box: Box) -> int:
     """How many of the box's docs are finished for its current stage."""
     return sum(1 for d in box.docs if doc_done_in_stage(d, box.stage))
@@ -67,3 +88,25 @@ def is_stage_finished(box: Box) -> bool:
     if box.stage == BoxStage.COMPLETED:
         return True
     return bool(box.docs) and all(doc_done_in_stage(d, box.stage) for d in box.docs)
+
+
+def advance_if_finished(box: Box) -> bool:
+    """
+    Move the box on if every doc is done for its current stage, releasing
+    it back to the pool.
+
+    Mutates the box but does not persist it: the caller decides whether to
+    save, and `False` means nothing changed. Keeping the transition here
+    rather than in a service means the rule has one home, whether a box
+    advances because its last doc was ticked off or for any other reason.
+    """
+    if box.stage == BoxStage.COMPLETED:
+        return False
+    if not is_stage_finished(box):
+        return False
+    upcoming = next_stage(box.stage)
+    if upcoming is None:
+        return False
+    box.stage = upcoming
+    box.assignee_id = None
+    return True

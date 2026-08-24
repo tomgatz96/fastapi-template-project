@@ -13,7 +13,9 @@ from app.core.config import settings
 from app.core.db import engine
 from app.models import TokenPayload, User
 from app.repositories.box_repository import BoxRepository
+from app.repositories.doc_repository import DocRepository
 from app.services.box_service import BoxService
+from app.services.doc_service import DocService
 
 reusable_oauth2 = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/login/access-token"
@@ -69,3 +71,10 @@ def get_box_service(session: SessionDep) -> BoxService:
 
 
 BoxServiceDep = Annotated[BoxService, Depends(get_box_service)]
+
+
+def get_doc_service(session: SessionDep) -> DocService:
+    return DocService(DocRepository(session), BoxRepository(session))
+
+
+DocServiceDep = Annotated[DocService, Depends(get_doc_service)]
