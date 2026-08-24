@@ -79,10 +79,16 @@ def test_month_starts_on_the_first() -> None:
 
 
 def test_boundaries_shift_with_timezone() -> None:
-    """UTC+3 means the local day began three hours earlier in UTC terms."""
+    """
+    UTC+3 means the local day began three hours earlier in UTC terms.
+
+    Measured modulo a day, because once Athens has crossed midnight and UTC
+    has not, its day start is three hours earlier on the *next* date, and a
+    plain subtraction would read as minus twenty-one hours.
+    """
     utc_day, _, _ = period_starts(0)
     athens_day, _, _ = period_starts(-180)
-    assert utc_day - athens_day == timedelta(hours=3)
+    assert (utc_day - athens_day) % timedelta(days=1) == timedelta(hours=3)
 
 
 def test_day_start_is_not_after_week_start_or_month_start() -> None:
