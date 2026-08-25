@@ -87,6 +87,12 @@ services:
     # TODO: remove once coverage is done locally
     volumes:
       - ./backend/htmlcov:/app/backend/htmlcov
+      # The image deliberately does not COPY tests, so that production images
+      # carry no test code. scripts/test.sh runs pytest inside this container
+      # via `up -d` + `exec`, which does not trigger the `develop: watch:`
+      # sync above -- that only runs under `docker compose watch`. Without
+      # this mount there is no /app/backend/tests and the run aborts.
+      - ./backend/tests:/app/backend/tests
     environment:
       SMTP_HOST: "mailcatcher"
       SMTP_PORT: "1025"
