@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import type { ColumnDef } from "@tanstack/react-table"
+import { useState } from "react"
 
 import { type BoxPublic, type DocPublic, DocsService } from "@/client"
-import { formatTimestamp, stageMeta } from "@/components/Boxes/stages"
+import { formatTimestamp, STAGES, stageMeta } from "@/components/Boxes/stages"
+import { ConfirmDialog } from "@/components/Common/ConfirmDialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
   Tooltip,
@@ -15,14 +17,26 @@ import { cn } from "@/lib/utils"
 import { handleError } from "@/utils"
 import { DocActionsMenu } from "./DocActionsMenu"
 
+/**
+ * When to ask before changing a doc's completion state.
+ *
+ * "always"  - confirm every tick and untick.
+ * "last"    - only confirm the tick that finishes the stage, and any untick
+ *             that discards a recorded stamp. Less clicking through dialogs
+ *             on a box with many docs.
+ */
+const CONFIRM_COMPLETION: "always" | "last" = "always"
+
 function CompletedToggle({ doc, box }: { doc: DocPublic; box: BoxPublic }) {
   const queryClient = useQueryClient()
   const { user: currentUser } = useAuth()
   const { showErrorToast } = useCustomToast()
+  const [pendingValue, setPendingValue] = useState<boolean | null>(null)
 
   const mutation = useMutation({
     mutationFn: (completed: boolean) =>
       DocsService.updateDoc({ id: doc.id, requestBody: { completed } }),
+    onSuccess: () => setPendingValue(null),
     onError: handleError.bind(showErrorToast),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["docs", doc.box_id] })
@@ -36,17 +50,81 @@ function CompletedToggle({ doc, box }: { doc: DocPublic; box: BoxPublic }) {
   const canComplete =
     !isFinished && (Boolean(currentUser?.is_superuser) || holdsBox)
 
+  const meta = stageMeta(box.stage)
+  const nextStage = STAGES[STAGES.findIndex((s) => s.value === box.stage) + 1]
+
+  // Ticking the last outstanding doc sends the whole box on to the next
+  // stage and releases it, so it deserves a mention whatever the setting.
+  const isLastOutstanding =
+    !doc.completed && box.stage_done_count + 1 >= box.doc_count
+  const discardsRecord = Boolean(doc.completed && doc[meta.atField])
+
+  const needsConfirmation = (next: boolean) =>
+    CONFIRM_COMPLETION === "always" ||
+    (next ? isLastOutstanding : discardsRecord)
+
+  const requestChange = (next: boolean) => {
+    if (needsConfirmation(next)) {
+      setPendingValue(next)
+    } else {
+      mutation.mutate(next)
+    }
+  }
+
+  const confirmCopy = (next: boolean) => {
+    if (next && isLastOutstanding) {
+      return {
+        title: `Finish ${meta.label}?`,
+        description: `This is the last doc left. Marking it ${meta.verb} moves ${box.name} on to ${nextStage?.label ?? "the next stage"} and releases it back to the pool, so you will no longer be holding it.`,
+        confirmLabel: `Mark ${meta.verb} and finish`,
+        destructive: false,
+      }
+    }
+    if (next) {
+      return {
+        title: `Mark as ${meta.verb}?`,
+        description: `${doc.name} will be recorded as ${meta.verb} by you, with the current time.`,
+        confirmLabel: `Mark ${meta.verb}`,
+        destructive: false,
+      }
+    }
+    return {
+      title: `Undo ${meta.verb}?`,
+      description: `The record of who ${meta.verb} ${doc.name} and when will be discarded.`,
+      confirmLabel: "Undo",
+      destructive: true,
+    }
+  }
+
+  const copy = confirmCopy(pendingValue ?? true)
+
   const checkbox = (
     <Checkbox
       checked={doc.completed ?? false}
       disabled={mutation.isPending || !canComplete}
-      onCheckedChange={(checked) => mutation.mutate(checked === true)}
-      aria-label={`Mark as ${stageMeta(box.stage).verb}`}
+      onCheckedChange={(checked) => requestChange(checked === true)}
+      aria-label={`Mark as ${meta.verb}`}
     />
   )
 
   if (canComplete) {
-    return checkbox
+    return (
+      <>
+        {checkbox}
+        <ConfirmDialog
+          open={pendingValue !== null}
+          onOpenChange={(open) => !open && setPendingValue(null)}
+          title={copy.title}
+          description={copy.description}
+          confirmLabel={copy.confirmLabel}
+          destructive={copy.destructive}
+          loading={mutation.isPending}
+          onConfirm={() =>
+            pendingValue !== null && mutation.mutate(pendingValue)
+          }
+        />
+      </>
+    )
   }
 
   return (
